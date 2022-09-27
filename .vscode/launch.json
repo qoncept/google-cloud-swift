@@ -1,0 +1,15 @@
+{
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Test google-cloud-swift",
+            "program": "/Applications/Xcode_13.2.1.app/Contents/Developer/usr/bin/xctest",
+            "args": [
+                ".build/debug/google-cloud-swiftPackageTests.xctest"
+            ],
+            "cwd": "${workspaceFolder:google-cloud-swift}",
+            "preLaunchTask": "swift: Build All"
+        }
+    ]
+}

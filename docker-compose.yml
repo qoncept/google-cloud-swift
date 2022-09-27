@@ -1,0 +1,16 @@
+services:
+  cloudstorage:
+    image: fsouza/fake-gcs-server
+    ports: 
+      - "4443:4443"
+    volumes: 
+      - ./fixtures/storage:/data
+    command: -scheme http
+  firebase:
+    image: ghcr.io/sidepelican/firebaseemulatorimage:main
+    ports:
+      - 9099:9099 # Auth
+    volumes:
+      - ./firebase:/work
+    command: firebase emulators:start --only auth -P testing-project-id
+

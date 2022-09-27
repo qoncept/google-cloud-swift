@@ -1,0 +1,5 @@
+#!/bin/bash
+
+export STORAGE_EMULATOR_HOST=127.0.0.1:4443
+export FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
+swift test

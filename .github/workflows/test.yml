@@ -1,0 +1,27 @@
+name: Test
+
+on:
+  push:
+    paths: "**.swift"
+    branches: main
+  pull_request:
+    paths: "**.swift"
+
+jobs:
+  test_google-cloud-swift:
+    name: Test google-cloud-swift
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: start emulator servers
+        run: docker compose up -d
+      - uses: actions/cache@v2
+        with:
+          path: |
+            .build/checkouts
+            .build/repositories
+          key: google-cloud-swift_build_${{ runner.os }}_${{ hashFiles('Package.resolved') }}
+      - run: swift package resolve
+      - run: swift build
+      - name: swift test
+        run: ./run_test.sh
