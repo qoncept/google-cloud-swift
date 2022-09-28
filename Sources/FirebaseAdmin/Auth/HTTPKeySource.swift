@@ -64,7 +64,7 @@ actor HTTPKeySource {
 
         let task = Task {
             willRefreshKeys?()
-            let res = try await client.execute(url: publicKeysURL).get()
+            let res = try await client.execute(url: publicKeysURL).map { UnsafeTransfer($0) }.get().wrappedValue
             
             let maxAge = try Self.findMaxAge(res: res)
             expiryTime = clock.now().addingTimeInterval(maxAge)
@@ -107,5 +107,16 @@ actor HTTPKeySource {
         }
 
         throw HTTPKeySourceError.noMaxAge
+    }
+}
+
+@usableFromInline
+struct UnsafeTransfer<Wrapped>: @unchecked Sendable {
+    @usableFromInline
+    var wrappedValue: Wrapped
+
+    @inlinable
+    init(_ wrappedValue: Wrapped) {
+        self.wrappedValue = wrappedValue
     }
 }
