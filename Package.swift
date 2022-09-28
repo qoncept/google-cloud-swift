@@ -21,9 +21,6 @@ let package = Package(
                 .product(name: "_CryptoExtras", package: "swift-crypto"),
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
                 .product(name: "JWTKit", package: "jwt-kit"),
-            ],
-            swiftSettings: [
-                .unsafeFlags(["-warn-concurrency"]),
             ]
         ),
         .target(
@@ -31,9 +28,6 @@ let package = Package(
             dependencies: [
                 "GoogleCloudBase",
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
-            ],
-            swiftSettings: [
-                .unsafeFlags(["-warn-concurrency"]),
             ]
         ),
         .target(
@@ -42,9 +36,6 @@ let package = Package(
                 "GoogleCloudBase",
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
                 .product(name: "JWTKit", package: "jwt-kit"),
-            ],
-            swiftSettings: [
-                .unsafeFlags(["-warn-concurrency"]),
             ]
         ),
         .testTarget(
