@@ -45,7 +45,7 @@ public struct UpdateUserProperties {
     public var providerToLink: UserProvider?
     public var providersToUnlink: [String]?
 
-    func toRaw(uid: String) throws -> RawUpdateRequest {
+    func toRaw(uid: String) throws -> RawUpdateUserRequest {
         var providerToLink = self.providerToLink
 
         var rawEmail = self.email
@@ -113,7 +113,7 @@ public struct UpdateUserProperties {
             deleteProvider += providersToUnlink
         }
 
-        return RawUpdateRequest(
+        return RawUpdateUserRequest(
             localId: uid,
             disableUser: disabled,
             displayName: rawDisplayName,
@@ -144,10 +144,10 @@ public struct MultiFactorUpdateSettings {
 
     public var enrolledFactors: [UpdateMultiFactorInfoRequest]
 
-    func toRaw() -> RawUpdateRequest.Mfa {
+    func toRaw() -> RawUpdateUserRequest.Mfa {
         let enrollments: [AuthFactorInfo] = enrolledFactors.map { $0.toRaw() }
 
-        return RawUpdateRequest.Mfa(
+        return RawUpdateUserRequest.Mfa(
             enrollments: enrollments.isEmpty ? nil : enrollments
         )
     }
@@ -222,7 +222,7 @@ public struct UserProvider: Encodable {
     }
 }
 
-struct RawUpdateRequest: Encodable {
+struct RawUpdateUserRequest: Encodable {
     struct Mfa: Encodable {
         var enrollments: [AuthFactorInfo]?
     }
