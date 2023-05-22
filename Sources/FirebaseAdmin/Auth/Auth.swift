@@ -66,17 +66,18 @@ public struct Auth {
     }
 
     public func getUser(uid: String) async throws -> UserRecord? {
-        struct Request: Encodable {
-            var localId: [String]
-        }
-        let payload = Request(localId: [uid])
+        return try await getUser(request: .init(localId: [uid]))
+    }
 
-        struct Response: Decodable {
-            var users: [UserRecord]?
-        }
+    public func getUser(email: String) async throws -> UserRecord? {
+        return try await getUser(request: .init(email: [email]))
+    }
 
+    private func getUser(request: GetUserRequest) async throws -> UserRecord? {
         let path = "/accounts:lookup"
-        return try await baseClient.post(path: path, payload: payload, responseType: Response.self).users?.first
+        return try await baseClient.post(
+            path: path, payload: request, responseType: GetUserResponse.self
+        ).users?.first
     }
 
     public func setCustomUserClaims(uid: String, claims: [String: String]) async throws {

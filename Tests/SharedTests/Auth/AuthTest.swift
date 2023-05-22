@@ -88,6 +88,25 @@ final class AuthTest: XCTestCase {
         XCTAssertNil(result)
     }
 
+    func testGetUserEmail() async throws {
+        let auth = try makeAuth()
+
+        _ = try await auth.createUser(user: UserToCreate(
+            email: "test3@example.com",
+            password: "012345"
+        ))
+
+        let user = try await auth.getUser(email: "test3@example.com")
+        XCTAssertNotNil(user)
+    }
+
+    func testGetUserEmailNotFound() async throws {
+        let auth = try makeAuth()
+
+        let user = try await auth.getUser(email: "xxxxxx@example.com")
+        XCTAssertNil(user)
+    }
+
     func testSetCustomClaims() async throws {
         let auth = try makeAuth()
 
