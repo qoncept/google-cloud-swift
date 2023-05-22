@@ -57,11 +57,8 @@ public struct Auth {
 
     public func createUser(user: UserToCreate) async throws -> String {
         try user.validatedRequest()
-        struct Response: Decodable {
-            var localId: String /// UID
-        }
         let path = "/accounts"
-        let res = try await baseClient.post(path: path, payload: user, responseType: Response.self)
+        let res = try await baseClient.post(path: path, payload: user, responseType: UpdateUserResponse.self)
         return res.localId
     }
 
@@ -78,6 +75,15 @@ public struct Auth {
         return try await baseClient.post(
             path: path, payload: request, responseType: GetUserResponse.self
         ).users?.first
+    }
+
+    public func updateUser(uid: String, properties: UpdateUserProperties) async throws -> String {
+        let path = "/accounts:update"
+
+        let res = try await baseClient.post(
+            path: path, payload: properties.toRaw(uid: uid), responseType: UpdateUserResponse.self
+        )
+        return res.localId
     }
 
     public func setCustomUserClaims(uid: String, claims: [String: String]) async throws {
