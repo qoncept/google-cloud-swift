@@ -187,6 +187,13 @@ final class AuthTest: XCTestCase {
         _ = u
     }
 
+    func testUpdateUserPhotoURL() async throws {
+        let u = try await runUpdateUser(
+            properties: .init(photoURL: .set("https://example.com/cat.jpeg"))
+        )
+        XCTAssertEqual(u.photoURL, "https://example.com/cat.jpeg")
+    }
+
     func testSetCustomClaims() async throws {
         let auth = try makeAuth()
 

@@ -16,10 +16,7 @@ public struct UpdateUserProperties {
         emailVerified: Bool? = nil,
         password: String? = nil,
         phoneNumber: SetOrDelete<String>? = nil,
-        photoURL: SetOrDelete<String>? = nil,
-        multiFactor: MultiFactorUpdateSettings? = nil,
-        providerToLink: UserProvider? = nil,
-        providersToUnlink: [String]? = nil
+        photoURL: SetOrDelete<String>? = nil
     ) {
         self.disabled = disabled
         self.displayName = displayName
@@ -28,9 +25,6 @@ public struct UpdateUserProperties {
         self.password = password
         self.phoneNumber = phoneNumber
         self.photoURL = photoURL
-        self.multiFactor = multiFactor
-        self.providerToLink = providerToLink
-        self.providersToUnlink = providersToUnlink
     }
 
     public var disabled: Bool?
@@ -41,44 +35,42 @@ public struct UpdateUserProperties {
     public var phoneNumber: SetOrDelete<String>?
     public var photoURL: SetOrDelete<String>?
 
-    public var multiFactor: MultiFactorUpdateSettings?
-    public var providerToLink: UserProvider?
-    public var providersToUnlink: [String]?
+// TODO: implement
+//    public var multiFactor: MultiFactorUpdateSettings?
+//    public var providerToLink: UserProvider?
+//    public var providersToUnlink: [String]?
 
     func toRaw(uid: String) throws -> RawUpdateUserRequest {
-        var providerToLink = self.providerToLink
-
         var rawEmail = self.email
         var rawDisplayName: String? = nil
         var rawPhotoUrl: String? = nil
         var rawPhoneNumber: String? = nil
-        var linkProviderUserInfo: LinkProviderUserInfo? = nil
         var deleteAttribute: [String] = []
         var deleteProvider: [String] = []
 
-        if let provider = providerToLink {
-            switch provider.providerId {
-            case "email":
-                if let _ = self.email {
-                    throw UpdateUserError(
-                        "Both UpdateRequest.email and UpdateRequest.providerToLink.providerId='email' were set. " +
-                        "To link to the email/password provider, only specify the UpdateRequest.email field."
-                    )
-                }
-                rawEmail = provider.uid
-                providerToLink = nil
-            case "phone":
-                if let _ = self.phoneNumber {
-                    throw UpdateUserError(
-                        "Both UpdateRequest.phoneNumber and UpdateRequest.providerToLink.providerId='phone' were set. " +
-                        "To link to a phone provider, only specify the UpdateRequest.phoneNumber field."
-                    )
-                }
-                rawPhoneNumber = provider.uid
-                providerToLink = nil
-            default: break
-            }
-        }
+//        if let provider = providerToLink {
+//            switch provider.providerId {
+//            case "email":
+//                if let _ = self.email {
+//                    throw UpdateUserError(
+//                        "Both UpdateRequest.email and UpdateRequest.providerToLink.providerId='email' were set. " +
+//                        "To link to the email/password provider, only specify the UpdateRequest.email field."
+//                    )
+//                }
+//                rawEmail = provider.uid
+//                providerToLink = nil
+//            case "phone":
+//                if let _ = self.phoneNumber {
+//                    throw UpdateUserError(
+//                        "Both UpdateRequest.phoneNumber and UpdateRequest.providerToLink.providerId='phone' were set. " +
+//                        "To link to a phone provider, only specify the UpdateRequest.phoneNumber field."
+//                    )
+//                }
+//                rawPhoneNumber = provider.uid
+//                providerToLink = nil
+//            default: break
+//            }
+//        }
 
         if let displayName {
             switch displayName {
@@ -107,12 +99,6 @@ public struct UpdateUserProperties {
             }
         }
 
-        linkProviderUserInfo = providerToLink?.toRaw()
-
-        if let providersToUnlink {
-            deleteProvider += providersToUnlink
-        }
-
         return RawUpdateUserRequest(
             localId: uid,
             disableUser: disabled,
@@ -122,8 +108,6 @@ public struct UpdateUserProperties {
             password: password,
             phoneNumber: rawPhoneNumber,
             photoUrl: rawPhotoUrl,
-            mfa: multiFactor?.toRaw(),
-            linkProviderUserInfo: linkProviderUserInfo,
             deleteAttribute: deleteAttribute.isEmpty ? nil : deleteAttribute,
             deleteProvider: deleteProvider.isEmpty ? nil : deleteProvider
         )
@@ -235,8 +219,11 @@ struct RawUpdateUserRequest: Encodable {
     var password: String?
     var phoneNumber: String?
     var photoUrl: String?
-    var mfa: Mfa?
-    var linkProviderUserInfo: LinkProviderUserInfo?
+
+    // TODO: implement
+//    var mfa: Mfa?
+//    var linkProviderUserInfo: LinkProviderUserInfo?
+
     var deleteAttribute: [String]?
     var deleteProvider: [String]?
 }
