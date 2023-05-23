@@ -41,7 +41,7 @@ public struct UpdateUserProperties {
 //    public var providersToUnlink: [String]?
 
     func toRaw(uid: String) throws -> RawUpdateUserRequest {
-        var rawEmail = self.email
+        let rawEmail = self.email
         var rawDisplayName: String? = nil
         var rawPhotoUrl: String? = nil
         var rawPhoneNumber: String? = nil
