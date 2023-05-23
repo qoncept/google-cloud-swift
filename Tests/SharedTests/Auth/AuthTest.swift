@@ -157,6 +157,13 @@ final class AuthTest: XCTestCase {
         XCTAssertEqual(u.displayName, nil)
     }
 
+    func testUpdateUserEmptyDisplayName() async throws {
+        let u = try await runUpdateUser(
+            properties: .init(displayName: .set(""))
+        )
+        XCTAssertEqual(u.displayName, "")
+    }
+
     func testUpdateUserEmail() async throws {
         let u = try await runUpdateUser(
             properties: .init(email: "testUpdateUserEmail.updated@example.com")
@@ -178,13 +185,6 @@ final class AuthTest: XCTestCase {
         )
         // TODO: attempt to login
         _ = u
-    }
-
-    func testUpdateUserEmptyUserName() async throws {
-        let u = try await runUpdateUser(
-            properties: .init(displayName: .set(""))
-        )
-        XCTAssertEqual(u.displayName, "")
     }
 
     func testSetCustomClaims() async throws {
