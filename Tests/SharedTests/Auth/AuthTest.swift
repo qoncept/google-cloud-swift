@@ -51,7 +51,7 @@ final class AuthTest: XCTestCase {
 
         do {
             let uid = try await auth.createUser(user: UserToCreate(
-                email: "test@example.com",
+                email: "testCreateUser@example.com",
                 password: "012345"
             ))
             XCTAssertTrue(!uid.isEmpty)
@@ -66,7 +66,7 @@ final class AuthTest: XCTestCase {
 
         let uid = try await XCTAssertNoThrow {
             try await auth.createUser(user: UserToCreate(
-                email: "test2@example.com",
+                email: "testGetUser@example.com",
                 password: "012345"
             ))
         }
@@ -75,7 +75,7 @@ final class AuthTest: XCTestCase {
             try await auth.getUser(uid: uid)
         }
         XCTAssertEqual(result.uid, uid)
-        XCTAssertEqual(result.email, "test2@example.com")
+        XCTAssertEqual(result.email, "testGetUser@example.com".lowercased())
         XCTAssertEqual(result.providers.first?.providerID, "password")
     }
 
@@ -92,11 +92,11 @@ final class AuthTest: XCTestCase {
         let auth = try makeAuth()
 
         _ = try await auth.createUser(user: UserToCreate(
-            email: "test3@example.com",
+            email: "testGetUserEmail@example.com",
             password: "012345"
         ))
 
-        let user = try await auth.getUser(email: "test3@example.com")
+        let user = try await auth.getUser(email: "testGetUserEmail@example.com".lowercased())
         XCTAssertNotNil(user)
     }
 
@@ -107,7 +107,7 @@ final class AuthTest: XCTestCase {
         XCTAssertNil(user)
     }
 
-    func testUpdateUserID() async throws {
+    func testUpdateUserConsistentID() async throws {
         let auth = try makeAuth()
         let uid0 = try await auth.createUser(
             user: UserToCreate(email: "testUpdateUserID@example.com", password: "123456")
@@ -161,12 +161,12 @@ final class AuthTest: XCTestCase {
         let u = try await runUpdateUser(
             properties: .init(email: "testUpdateUserEmail.updated@example.com")
         )
-        XCTAssertEqual(u.email, "testUpdateUserEmail.updated@example.com")
+        XCTAssertEqual(u.email, "testUpdateUserEmail.updated@example.com".lowercased())
     }
 
     func testUpdateUserDeletePhoneNumber() async throws {
         let u = try await runUpdateUser(
-            create: { $0.phoneNumber = "090-1234-1234" },
+            create: { $0.phoneNumber = "+81-090-1234-1234" },
             properties: .init(phoneNumber: .delete)
         )
         XCTAssertEqual(u.phoneNumber, nil)
@@ -180,12 +180,19 @@ final class AuthTest: XCTestCase {
         _ = u
     }
 
+    func testUpdateUserEmptyUserName() async throws {
+        let u = try await runUpdateUser(
+            properties: .init(displayName: .set(""))
+        )
+        XCTAssertEqual(u.displayName, "")
+    }
+
     func testSetCustomClaims() async throws {
         let auth = try makeAuth()
 
         let uid = try await XCTAssertNoThrow {
             try await auth.createUser(user: UserToCreate(
-                email: "test3@example.com",
+                email: "testSetCustomClaims@example.com",
                 password: "012345"
             ))
         }
@@ -208,7 +215,7 @@ final class AuthTest: XCTestCase {
         let auth = try makeAuth()
 
         let uid = try await auth.createUser(user: UserToCreate(
-            email: "\(#line)@example.com",
+            email: "testDeleteUser_\(#line)@example.com",
             password: "012345"
         ))
         let userBeforeRemoved = try await XCTAssertNoThrow { try await auth.getUser(uid: uid) }
