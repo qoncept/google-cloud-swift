@@ -141,10 +141,7 @@ public struct AuthorizedClient: Sendable {
             throw AuthorizedClientError(message: "no body")
         }
 
-//        if let data = body.getData(at: body.readerIndex, length: body.readableBytes),
-//           let string = String(data: data, encoding: .utf8) {
-//            print(string)
-//        }
+//        print(String(buffer: body))
 
         if UInt(400)..<600 ~= res.status.code {
             let errorResponse: ErrorResponse

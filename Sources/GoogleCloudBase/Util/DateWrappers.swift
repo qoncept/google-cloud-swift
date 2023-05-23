@@ -97,7 +97,7 @@ extension KeyedDecodingContainer {
     }
 }
 
-@propertyWrapper public struct StringUnixOptionalDate: Decodable {
+@propertyWrapper public struct StringMilliUnixOptionalDate: Decodable {
     public init(wrappedValue: Date? = nil) {
         self.wrappedValue = wrappedValue
     }
@@ -113,7 +113,7 @@ extension KeyedDecodingContainer {
 }
 
 extension KeyedDecodingContainer {
-    public func decode(_ type: StringUnixOptionalDate.Type, forKey key: Key) throws -> StringUnixOptionalDate {
+    public func decode(_ type: StringMilliUnixOptionalDate.Type, forKey key: Key) throws -> StringMilliUnixOptionalDate {
         try decodeIfPresent(type, forKey: key) ?? .init(wrappedValue: nil)
     }
 }
