@@ -39,13 +39,13 @@ public struct UserRecord: Decodable {
     }
 
     @StringMilliUnixDate public var createdAt: Date
-    @StringMilliUnixDate public var lastLoginAt: Date
+    @StringMilliUnixOptionalDate public var lastLoginAt: Date?
     @RFC3339ZOptionalDate public var lastRefreshAt: Date?
 
     public var providers: [UserInfo]
 
     @CustomClaims public var customClaims: [String: String]
-    @StringUnixOptionalDate public var tokensValidAfterAt: Date?
+    @StringMilliUnixOptionalDate public var tokensValidAfterAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case uid = "localId"
