@@ -22,6 +22,7 @@ public struct UserToCreate: Encodable {
     public var password: String?
 
     func validatedRequest() throws {
+        return
         if let localId = localId {
             try Self.validateUID(uid: localId)
         }

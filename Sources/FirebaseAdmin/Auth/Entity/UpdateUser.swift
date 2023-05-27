@@ -1,10 +1,56 @@
 import Foundation
 
-struct _UpdateUserError: Swift.Error & CustomStringConvertible {
-    init(_ message: String) { self.message = message }
-    var message: String
-    var description: String { message }
+public struct UpdateUserError: Error {
+    public enum Code {
+        case invalidIDToken
+        case emailExists
+        case weakPassword
+
+        public init?(from code: FirebaseAuthError.Code) {
+            switch code {
+            case .invalidIDToken: self = .invalidIDToken
+            case .emailExists: self = .emailExists
+            case .weakPassword: self = .weakPassword
+            default: return nil
+            }
+        }
+
+        public var authError: FirebaseAuthError.Code {
+            switch self {
+            case .invalidIDToken: return .invalidIDToken
+            case .emailExists: return .emailExists
+            case .weakPassword: return .weakPassword
+            }
+        }
+    }
+
+    public init(
+        code: UpdateUserError.Code,
+        message: String?
+    ) {
+        self.code = code
+        self.message = message
+    }
+
+    public var code: Code
+    public var message: String?
+
+    public init?(from error: FirebaseAuthError) {
+        guard let code = Code(from: error.code) else { return nil }
+        self.init(
+            code: code,
+            message: error.message
+        )
+    }
+
+    public var authError: FirebaseAuthError {
+        FirebaseAuthError(
+            code: code.authError,
+            message: message
+        )
+    }
 }
+
 
 // interface UpdateRequest
 // https://github.com/firebase/firebase-admin-node/blob/master/src/auth/auth-config.ts#L129

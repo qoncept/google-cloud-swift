@@ -52,7 +52,7 @@ final class AuthTest: XCTestCase {
         do {
             let uid = try await auth.createUser(user: UserToCreate(
                 email: "testCreateUser@example.com",
-                password: "012345"
+                password: "01234"
             ))
             XCTAssertTrue(!uid.isEmpty)
         } catch {

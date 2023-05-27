@@ -55,35 +55,39 @@ public struct Auth {
         return token
     }
 
-    public func createUser(user: UserToCreate) async throws -> String {
+    public func createUser(user: UserToCreate) async throws -> Result<String, FirebaseAuthError> {
         try user.validatedRequest()
         let path = "/accounts"
         let res = try await baseClient.post(path: path, payload: user, responseType: UpdateUserResponse.self)
-        return res.localId
+        return res.map { $0.localId }
     }
 
-    public func getUser(uid: String) async throws -> UserRecord? {
+    public func getUser(uid: String) async throws -> Result<UserRecord?, FirebaseAuthError> {
         return try await getUser(request: .init(localId: [uid]))
     }
 
-    public func getUser(email: String) async throws -> UserRecord? {
+    public func getUser(email: String) async throws -> Result<UserRecord?, FirebaseAuthError> {
         return try await getUser(request: .init(email: [email]))
     }
 
-    private func getUser(request: GetUserRequest) async throws -> UserRecord? {
+    private func getUser(request: GetUserRequest) async throws -> Result<UserRecord?, FirebaseAuthError> {
         let path = "/accounts:lookup"
-        return try await baseClient.post(
+        let users = try await baseClient.post(
             path: path, payload: request, responseType: GetUserResponse.self
-        ).users?.first
+        )
+        return users.map { $0.users?.first }
     }
 
-    public func updateUser(uid: String, properties: UpdateUserProperties) async throws -> String {
+    public func updateUser(uid: String, properties: UpdateUserProperties) async throws -> Result<String, UpdateUserError> {
         let path = "/accounts:update"
 
         let res = try await baseClient.post(
             path: path, payload: properties.toRaw(uid: uid), responseType: UpdateUserResponse.self
         )
-        return res.localId
+        return try res.map { $0.localId }.tryMapError {
+            guard let error = UpdateUserError(from: $0) else { throw $0 }
+            return error
+        }
     }
 
     public func setCustomUserClaims(uid: String, claims: [String: String]) async throws {
