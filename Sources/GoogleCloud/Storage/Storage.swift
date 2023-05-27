@@ -27,10 +27,9 @@ public struct Storage: Sendable {
 
         self.credentialStore = credentialStore
         authorizedClient = .init(
-            baseURL: baseURL,
+            server: .init(baseURL: baseURL, isEmulator: isEmulator),
             credentialStore: credentialStore,
-            httpClient: client,
-            isEmulator: isEmulator
+            httpClient: client
         )
     }
 

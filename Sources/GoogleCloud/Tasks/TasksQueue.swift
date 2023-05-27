@@ -32,10 +32,9 @@ public struct TasksQueue: Sendable {
         parent = id.addingSlashSuffix.choppingSlashPrefix
         self.credentialStore = credentialStore
         authorizedClient = .init(
-            baseURL: defaultAPIEndpoint,
+            server: .init(baseURL: defaultAPIEndpoint, isEmulator: false),
             credentialStore: credentialStore,
-            httpClient: client,
-            isEmulator: false
+            httpClient: client
         )
     }
 
