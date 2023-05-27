@@ -1,6 +1,6 @@
 import Foundation
 
-struct UpdateUserError: Swift.Error & CustomStringConvertible {
+struct _UpdateUserError: Swift.Error & CustomStringConvertible {
     init(_ message: String) { self.message = message }
     var message: String
     var description: String { message }
