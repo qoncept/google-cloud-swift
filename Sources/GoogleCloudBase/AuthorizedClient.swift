@@ -14,27 +14,22 @@ struct AuthorizedClientError: Error, CustomStringConvertible, LocalizedError {
 }
 
 public struct AuthorizedClient: Sendable {
-    public var server: Server
-    public var baseURL: URL { server.baseURL }
+    public var baseURL: URL
     public var credentialStore: CredentialStore
     public var httpClient: AsyncHTTPClient.HTTPClient
-    public var isEmulator: Bool { server.isEmulator }
     private let logger: Logger = .init(label: "AuthorizedClient")
 
     public init(
-        server: Server,
+        baseURL: URL,
         credentialStore: CredentialStore,
         httpClient: HTTPClient
     ) {
-        self.server = server
+        self.baseURL = baseURL
         self.credentialStore = credentialStore
         self.httpClient = httpClient
     }
 
     private func token() async throws -> String {
-        if isEmulator {
-            return emulatorToken
-        }
         return try await credentialStore.accessToken()
     }
 

@@ -11,40 +11,40 @@ struct AuthError: Error, CustomStringConvertible, LocalizedError {
     var errorDescription: String? { message }
 }
 
-extension Server {
-    public static let authProduction: Server = Server(
-        baseURL: URL(string: "https://identitytoolkit.googleapis.com/v1")!,
-        isEmulator: false
-    )
+public struct Auth {
+    public static let productionBaseURL: URL = URL(string: "https://identitytoolkit.googleapis.com/v1")!
 
-    public static func authEmulator(host: String) -> Server {
-        return Server(
-            baseURL: URL(string: "http://\(host)/identitytoolkit.googleapis.com/v1")!,
-            isEmulator: true
-        )
+    public static let emulatorHostEnvVar = "FIREBASE_AUTH_EMULATOR_HOST"
+
+    public static func emulatorBaseURL(host: String) -> URL {
+        URL(string: "http://\(host)/identitytoolkit.googleapis.com/v1")!
     }
 
-    public static func auth() -> Server {
-        if let host = ProcessInfo.processInfo.environment[Auth.emulatorHostEnvVar] {
-            return self.authEmulator(host: host)
-        } else {
-            return self.authProduction
-        }
+    public static func emulatorBaseURL() -> URL? {
+        guard let host = ProcessInfo.processInfo.environment[Auth.emulatorHostEnvVar] else { return nil }
+        return emulatorBaseURL(host: host)
     }
 
-    public var authEmulatorBaseURL: URL? {
-        guard isEmulator else { return nil }
-        guard let c = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) else { return nil }
+    public static func emulatorAPIBaseURL(url: URL) -> URL? {
+        guard let c = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
         guard var host = c.host else { return nil }
         if let port = c.port {
             host += ":" + port.description
         }
         return URL(string: "http://\(host)/emulator/v1")
     }
-}
 
-public struct Auth {
-    public static let emulatorHostEnvVar = "FIREBASE_AUTH_EMULATOR_HOST"
+    public static func defaultBaseURL() -> URL {
+        if let url = emulatorBaseURL() { return url }
+        return productionBaseURL
+    }
+
+    private static func projectID(from credentialStore: CredentialStore) -> String? {
+        guard let richCredential = credentialStore.compilersafeCredential as? any RichCredential else {
+            return nil
+        }
+        return richCredential.projectID
+    }
     
     private var baseClient: BaseClient
     private let keySource: HTTPKeySource
@@ -52,12 +52,30 @@ public struct Auth {
     public init(
         credentialStore: CredentialStore,
         client: AsyncHTTPClient.HTTPClient,
-        server: Server = .auth(),
-        projectID: String? = nil,
+        baseURL paramBaseURL: URL? = nil,
+        projectID paramProjectID: String? = nil,
         tenantID: String? = nil
     ) throws {
+        var credentialStore = credentialStore
+        var baseURL: URL
+        let projectID: String? = paramProjectID ??
+            Self.projectID(from: credentialStore)
+
+        if let paramBaseURL {
+            baseURL = paramBaseURL
+        } else {
+            if let emulator = Self.emulatorBaseURL() {
+                baseURL = emulator
+                credentialStore = CredentialStore(
+                    credential: .makeEmulatorCredential()
+                )
+            } else {
+                baseURL = Self.productionBaseURL
+            }
+        }
+
         let authorizedClient = AuthorizedClient(
-            server: server,
+            baseURL: baseURL,
             credentialStore: credentialStore,
             httpClient: client
         )
@@ -77,8 +95,8 @@ public struct Auth {
         let projectID: String
         if let paramProjectID {
             projectID = paramProjectID
-        } else if let c = authorizedClient.credentialStore.compilersafeCredential as? RichCredential {
-            projectID = c.projectID
+        } else if let id = Self.projectID(from: authorizedClient.credentialStore) {
+            projectID = id
         } else {
             throw AuthError(message: "projectID must be provided if the credential doesn't have it.")
         }
