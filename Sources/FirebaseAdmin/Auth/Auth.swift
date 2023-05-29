@@ -34,11 +34,6 @@ public struct Auth {
         return URL(string: "http://\(host)/emulator/v1")
     }
 
-    public static func defaultBaseURL() -> URL {
-        if let url = emulatorBaseURL() { return url }
-        return productionBaseURL
-    }
-
     private static func projectID(from credentialStore: CredentialStore) -> String? {
         guard let richCredential = credentialStore.compilersafeCredential as? any RichCredential else {
             return nil
