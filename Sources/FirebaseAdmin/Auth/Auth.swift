@@ -48,8 +48,7 @@ public struct Auth {
         credentialStore: CredentialStore,
         client: AsyncHTTPClient.HTTPClient,
         baseURL paramBaseURL: URL? = nil,
-        projectID paramProjectID: String? = nil,
-        tenantID: String? = nil
+        projectID paramProjectID: String? = nil
     ) throws {
         var credentialStore = credentialStore
         var baseURL: URL
@@ -77,15 +76,13 @@ public struct Auth {
 
         try self.init(
             authorizedClient: authorizedClient,
-            projectID: projectID,
-            tenantID: tenantID
+            projectID: projectID
         )
     }
 
     public init(
         authorizedClient: AuthorizedClient,
-        projectID paramProjectID: String? = nil,
-        tenantID: String? = nil
+        projectID paramProjectID: String? = nil
     ) throws {
         let projectID: String
         if let paramProjectID {
@@ -99,7 +96,7 @@ public struct Auth {
         baseClient = BaseClient(
             authorizedClient: authorizedClient,
             projectID: projectID,
-            tenantID: tenantID
+            tenantID: nil
         )
         keySource = HTTPKeySource(client: authorizedClient.httpClient)
     }
