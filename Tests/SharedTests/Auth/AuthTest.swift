@@ -2,7 +2,6 @@
 import NIOPosix
 import XCTest
 import Logging
-import GoogleCloudBase
 
 private let testingProjectID = "testing-project-id"
 
