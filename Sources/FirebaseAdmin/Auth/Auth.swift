@@ -55,38 +55,37 @@ public struct Auth {
         return token
     }
 
-    public func createUser(user: UserToCreate) async throws -> String {
+    public func createUser(_ user: UserToCreate) async throws -> String {
         try user.validatedRequest()
         let path = "/accounts"
         let res = try await baseClient.post(path: path, payload: user, responseType: UpdateUserResponse.self)
         return res.localId
     }
 
-    public func getUser(uid: String) async throws -> UserRecord? {
-        return try await getUser(request: .init(localId: [uid]))
+    public func user(for uid: String) async throws -> UserRecord? {
+        return try await user(request: .init(localId: [uid]))
     }
 
-    public func getUser(email: String) async throws -> UserRecord? {
-        return try await getUser(request: .init(email: [email]))
+    public func user(byEmail email: String) async throws -> UserRecord? {
+        return try await user(request: .init(email: [email]))
     }
 
-    private func getUser(request: GetUserRequest) async throws -> UserRecord? {
+    private func user(request: GetUserRequest) async throws -> UserRecord? {
         let path = "/accounts:lookup"
         return try await baseClient.post(
             path: path, payload: request, responseType: GetUserResponse.self
         ).users?.first
     }
 
-    public func updateUser(uid: String, properties: UpdateUserProperties) async throws -> String {
+    public func updateUser(_ properties: UpdateUserProperties, for uid: String) async throws {
         let path = "/accounts:update"
 
-        let res = try await baseClient.post(
+        _ = try await baseClient.post(
             path: path, payload: properties.toRaw(uid: uid), responseType: UpdateUserResponse.self
         )
-        return res.localId
     }
 
-    public func setCustomUserClaims(uid: String, claims: [String: String]) async throws {
+    public func setCustomUserClaims(_ claims: [String: String], for uid: String) async throws {
         struct Request: Encodable {
             var localId: String
             var customAttributes: String
@@ -102,7 +101,7 @@ public struct Auth {
         _ = try await baseClient.post(path: path, payload: payload, responseType: Response.self)
     }
 
-    public func deleteUser(uid: String) async throws {
+    public func deleteUser(for uid: String) async throws {
         struct Request: Encodable {
             var localId: String /// UID
         }
