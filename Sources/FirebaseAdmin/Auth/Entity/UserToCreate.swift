@@ -46,7 +46,7 @@ public struct UserToCreate: Encodable {
     public var photoUrl: String?
     public var password: String?
 
-    func validatedRequest() throws -> Result<Void, CreateUserError> {
+    func validatedRequest() -> Result<Void, CreateUserError> {
         if let localId = localId {
             switch Self.validateUID(uid: localId) {
             case .failure(let e): return .failure(e)
