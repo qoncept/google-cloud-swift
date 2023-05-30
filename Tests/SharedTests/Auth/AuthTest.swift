@@ -109,18 +109,17 @@ final class AuthTest: XCTestCase {
 
     func testUpdateUserConsistentID() async throws {
         let auth = try makeAuth()
-        let uid0 = try await auth.createUser(
+        let uid = try await auth.createUser(
             UserToCreate(email: "testUpdateUserID@example.com", password: "123456")
         )
-        let user0o = try await auth.user(for: uid0)
+        let user0o = try await auth.user(for: uid)
         let user0 = try XCTUnwrap(user0o)
         XCTAssertFalse(user0.disabled)
 
-        let uid1 = try await auth.updateUser(for: uid0, with: .init(disabled: true))
-        XCTAssertEqual(uid1, uid0)
-        let user1o = try await auth.user(for: uid1)
+        try await auth.updateUser(.init(disabled: true), for: uid)
+        let user1o = try await auth.user(for: uid)
         let user1 = try XCTUnwrap(user1o)
-        XCTAssertEqual(user1.uid, uid1)
+        XCTAssertEqual(user1.uid, uid)
         XCTAssertTrue(user1.disabled)
     }
 
@@ -138,8 +137,8 @@ final class AuthTest: XCTestCase {
 
         let auth = try makeAuth()
         let uid0 = try await auth.createUser(create)
-        let uid1 = try await auth.updateUser(for: uid0, with: properties)
-        let usero = try await auth.user(for: uid1)
+        try await auth.updateUser(properties, for: uid0)
+        let usero = try await auth.user(for: uid0)
         return try XCTUnwrap(usero)
     }
 
@@ -205,10 +204,10 @@ final class AuthTest: XCTestCase {
         }
 
         await XCTAssertNoThrow {
-            try await auth.setCustomUserClaims(for: uid, to: [
+            try await auth.setCustomUserClaims([
                 "key1": "value1",
                 "key2": "value2",
-            ])
+            ], for: uid)
         }
 
         let result = try await XCTUnwrap {

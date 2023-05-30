@@ -77,16 +77,15 @@ public struct Auth {
         ).users?.first
     }
 
-    public func updateUser(for uid: String, with properties: UpdateUserProperties) async throws -> String {
+    public func updateUser(_ properties: UpdateUserProperties, for uid: String) async throws {
         let path = "/accounts:update"
 
-        let res = try await baseClient.post(
+        _ = try await baseClient.post(
             path: path, payload: properties.toRaw(uid: uid), responseType: UpdateUserResponse.self
         )
-        return res.localId
     }
 
-    public func setCustomUserClaims(for uid: String, to claims: [String: String]) async throws {
+    public func setCustomUserClaims(_ claims: [String: String], for uid: String) async throws {
         struct Request: Encodable {
             var localId: String
             var customAttributes: String
