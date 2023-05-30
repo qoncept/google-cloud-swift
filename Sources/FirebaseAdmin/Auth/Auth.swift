@@ -139,20 +139,20 @@ public struct Auth {
         return res.map { $0.localId }
     }
 
-    public func user(for uid: String) async throws -> Result<UserRecord?, FirebaseAuthError> {
+    public func user(for uid: String) async throws -> UserRecord? {
         return try await user(request: .init(localId: [uid]))
     }
 
-    public func user(byEmail email: String) async throws -> Result<UserRecord?, FirebaseAuthError> {
+    public func user(byEmail email: String) async throws -> UserRecord? {
         return try await user(request: .init(email: [email]))
     }
 
-    private func user(request: GetUserRequest) async throws -> Result<UserRecord?, FirebaseAuthError> {
+    private func user(request: GetUserRequest) async throws -> UserRecord? {
         let path = "/accounts:lookup"
-        let users = try await baseClient.post(
+        let res = try await baseClient.post(
             path: path, payload: request, responseType: GetUserResponse.self
-        )
-        return users.map { $0.users?.first }
+        ).get()
+        return res.users?.first
     }
 
     public func updateUser(_ properties: UpdateUserProperties, for uid: String) async throws -> Result<Void, UpdateUserError> {

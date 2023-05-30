@@ -54,8 +54,8 @@ final class AuthTest: XCTestCase {
         do {
             let uid = try await auth.createUser(UserToCreate(
                 email: "testCreateUser@example.com",
-                password: "01234"
-            ))
+                password: "012345"
+            )).get()
             XCTAssertTrue(!uid.isEmpty)
         } catch {
             dump(error)
@@ -70,7 +70,7 @@ final class AuthTest: XCTestCase {
             try await auth.createUser(UserToCreate(
                 email: "testGetUser@example.com",
                 password: "111111"
-            ))
+            )).get()
         }
 
         let result = try await XCTUnwrap {
@@ -114,12 +114,12 @@ final class AuthTest: XCTestCase {
         let auth = try makeAuth()
         let uid = try await auth.createUser(
             UserToCreate(email: "testUpdateUserID@example.com", password: "123456")
-        )
+        ).get()
         let user0o = try await auth.user(for: uid)
         let user0 = try XCTUnwrap(user0o)
         XCTAssertFalse(user0.disabled)
 
-        try await auth.updateUser(.init(disabled: true), for: uid)
+        try await auth.updateUser(.init(disabled: true), for: uid).get()
         let user1o = try await auth.user(for: uid)
         let user1 = try XCTUnwrap(user1o)
         XCTAssertEqual(user1.uid, uid)
@@ -139,8 +139,8 @@ final class AuthTest: XCTestCase {
         modifyCreate?(&create)
 
         let auth = try makeAuth()
-        let uid0 = try await auth.createUser(create)
-        try await auth.updateUser(properties, for: uid0)
+        let uid0 = try await auth.createUser(create).get()
+        try await auth.updateUser(properties, for: uid0).get()
         let usero = try await auth.user(for: uid0)
         return try XCTUnwrap(usero)
     }
@@ -203,7 +203,7 @@ final class AuthTest: XCTestCase {
             try await auth.createUser(UserToCreate(
                 email: "testSetCustomClaims@example.com",
                 password: "012345"
-            ))
+            )).get()
         }
 
         await XCTAssertNoThrow {
@@ -226,7 +226,7 @@ final class AuthTest: XCTestCase {
         let uid = try await auth.createUser(UserToCreate(
             email: "testDeleteUser_\(#line)@example.com",
             password: "012345"
-        ))
+        )).get()
         let userBeforeRemoved = try await XCTAssertNoThrow { try await auth.user(for: uid) }
         XCTAssertNotNil(userBeforeRemoved)
 
