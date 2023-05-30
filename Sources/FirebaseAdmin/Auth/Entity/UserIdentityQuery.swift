@@ -1,4 +1,4 @@
-// from: https://github.com/firebase/firebase-admin-node/blob/master/src/auth/user-record.ts#L423
+// from: https://github.com/firebase/firebase-admin-node/blob/master/src/auth/identifier.ts#L57
 
 public enum UserIdentityQuery {
     case uid(String)
