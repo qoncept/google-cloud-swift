@@ -167,7 +167,7 @@ public struct FirebaseAuthError: CodeAndMessageError {
     ]
 
     static let stringToCodeMap: [String: Code] = Dictionary(
-        codeToStringMap.map { ($0.value, $0.key) }
-    ) { $1 }
+        uniqueKeysWithValues: codeToStringMap.map { ($0.value, $0.key) }
+    )
 }
 

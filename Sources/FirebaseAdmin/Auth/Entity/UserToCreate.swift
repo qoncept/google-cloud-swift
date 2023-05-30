@@ -8,6 +8,7 @@ public struct CreateUserError: CodeAndMessageError {
         case invalidPhoneNumber
         case invalidPhotoURL
         case weakPassword
+        case emailExists
     }
 
     public init(code: CreateUserError.Code, message: String?) {

@@ -63,6 +63,24 @@ final class AuthTest: XCTestCase {
         }
     }
 
+    func testCreateUserErrorEmailExists() async throws {
+        let auth = try makeAuth()
+
+        let email = "testCreateUserErrorEmailExists@example.com"
+
+        let _ = try await auth.createUser(.init(
+            email: email,
+            password: "123456"
+        )).get()
+
+        let ret = try await auth.createUser(.init(
+            email: email,
+            password: "123456"
+        ))
+        let error = try XCTUnwrap(ret.failure)
+        XCTAssertEqual(error.code, .emailExists)
+    }
+
     func testGetUser() async throws {
         let auth = try makeAuth()
 
