@@ -214,6 +214,20 @@ final class AuthTest: XCTestCase {
         XCTAssertEqual(u.photoURL, "https://example.com/cat.jpeg")
     }
 
+    func testUpdateUserErrorInvalidEmail() async throws {
+        let auth = try makeAuth()
+        let id = try await auth.createUser(.init(
+            email: "testUpdateUserErrorInvalidEmail@example.com",
+            password: "123456"
+        )).get()
+        let error = try await XCTUnwrap {
+            try await auth.updateUser(
+                .init(email: "a"), for: id
+            ).failure
+        }
+        XCTAssertEqual(error.code, .invalidEmail)
+    }
+
     func testUpdateUserErrorEmailExists() async throws {
         let auth = try makeAuth()
 
@@ -229,6 +243,23 @@ final class AuthTest: XCTestCase {
         XCTAssertNil(error.message)
     }
 
+    func testUpdateUserErrorInvalidPhoneNumber() async throws {
+        let auth = try makeAuth()
+
+        let id = try await auth.createUser(
+            .init(
+                email: "testUpdateUserErrorInvalidPhoneNumber@example.com",
+                password: "123456"
+            )
+        ).get()
+        let error = try await XCTUnwrap {
+            try await auth.updateUser(
+                .init(phoneNumber: .set("aaa")), for: id
+            ).failure
+        }
+        XCTAssertEqual(error.code, .invalidPhoneNumber)
+    }
+    
     func testUpdateUserErrorWeakPassword() async throws {
         let auth = try makeAuth()
 

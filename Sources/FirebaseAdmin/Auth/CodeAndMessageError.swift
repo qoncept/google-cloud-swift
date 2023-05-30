@@ -1,4 +1,6 @@
-public protocol CodeAndMessageError: Error & CustomStringConvertible {
+import Foundation
+
+public protocol CodeAndMessageError: Error & CustomStringConvertible & LocalizedError {
     associatedtype Code: RawRepresentable where Code.RawValue == String
 
     init(code: Code, message: String?)
@@ -14,6 +16,10 @@ extension CodeAndMessageError {
             str += ": " + message
         }
         return str
+    }
+
+    public var errorDescription: String? {
+        description
     }
 
     public func convert<NewError>(to type: NewError.Type = NewError.self) -> NewError? where NewError: CodeAndMessageError {

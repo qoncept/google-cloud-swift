@@ -2,7 +2,12 @@ import Foundation
 
 public struct UpdateUserError: CodeAndMessageError {
     public enum Code: String, Sendable {
+//        case invalidUID
+//        case invalidDisplayName
+        case invalidEmail
         case emailExists
+        case invalidPhoneNumber
+//        case invalidPhotoURL
         case weakPassword
     }
 

@@ -5,10 +5,10 @@ public struct CreateUserError: CodeAndMessageError {
         case invalidUID
         case invalidDisplayName
         case invalidEmail
+        case emailExists
         case invalidPhoneNumber
         case invalidPhotoURL
         case weakPassword
-        case emailExists
     }
 
     public init(code: CreateUserError.Code, message: String?) {
