@@ -154,6 +154,17 @@ public struct Auth {
         ).users?.first
     }
 
+    public func users(for queries: [UserIdentityQuery]) async throws -> [UserRecord] {
+        let path = "/accounts:lookup"
+        var request = GetUsersRequest()
+        for query in queries {
+            request.append(query: query)
+        }
+        return try await baseClient.post(
+            path: path, payload: request, responseType: GetUsersResponse.self
+        ).users ?? []
+    }
+
     public func updateUser(_ properties: UpdateUserProperties, for uid: String) async throws {
         let path = "/accounts:update"
 
