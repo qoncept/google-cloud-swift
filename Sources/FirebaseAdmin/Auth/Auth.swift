@@ -132,11 +132,14 @@ public struct Auth {
         return token
     }
 
-    public func createUser(_ user: UserToCreate) async throws -> Result<String, FirebaseAuthError> {
-        try user.validatedRequest()
+    public func createUser(_ user: UserToCreate) async throws -> Result<String, CreateUserError> {
+        switch try user.validatedRequest() {
+        case .failure(let e): return .failure(e)
+        case .success: break
+        }
         let path = "/accounts"
         let res = try await baseClient.post(path: path, payload: user, responseType: UpdateUserResponse.self)
-        return res.map { $0.localId }
+        return try res.map { $0.localId }.tryMapError { try $0.toCreateUser() }
     }
 
     public func user(for uid: String) async throws -> UserRecord? {
@@ -162,7 +165,7 @@ public struct Auth {
             path: path, payload: properties.toRaw(uid: uid), responseType: UpdateUserResponse.self
         )
 
-        return try ret.map { (_) in () }.tryMapError { try $0.toUpdateUserError() }
+        return try ret.map { (_) in () }.tryMapError { try $0.toUpdateUser() }
     }
 
     public func setCustomUserClaims(_ claims: [String: String], for uid: String) async throws {

@@ -17,13 +17,13 @@ public struct UpdateUserError: CodeAndMessageError {
     public var code: Code
     public var message: String?
 
-    public func toAuthError() -> FirebaseAuthError {
+    public func toAuth() -> FirebaseAuthError {
         convert()!
     }
 }
 
 extension FirebaseAuthError {
-    public func toUpdateUserError() throws -> UpdateUserError {
+    public func toUpdateUser() throws -> UpdateUserError {
         try convertOrThrow()
     }
 }

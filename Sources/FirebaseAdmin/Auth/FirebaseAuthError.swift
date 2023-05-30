@@ -1,5 +1,9 @@
 public struct FirebaseAuthError: CodeAndMessageError {
     public enum Code: String, Sendable {
+        /*
+         AUTH_SERVER_TO_CLIENT_CODE
+         https://github.com/firebase/firebase-admin-node/blob/master/src/utils/error.ts#L890
+         */
         case billingNotEnabled
         case claimsTooLarge
         case configurationExists
@@ -60,6 +64,13 @@ public struct FirebaseAuthError: CodeAndMessageError {
         case invalidRecaptchaAction
         case invalidRecaptchaEnforcementState
         case recaptchaNotEnabled
+
+        /*
+         AuthClientErrorCode
+         https://github.com/firebase/firebase-admin-node/blob/master/src/utils/error.ts#L361
+         */
+        case invalidUID
+        case invalidPhotoURL
     }
 
     public var code: Code
@@ -152,7 +163,7 @@ public struct FirebaseAuthError: CodeAndMessageError {
         .weakPassword: "WEAK_PASSWORD",
         .invalidRecaptchaAction: "INVALID_RECAPTCHA_ACTION",
         .invalidRecaptchaEnforcementState: "INVALID_RECAPTCHA_ENFORCEMENT_STATE",
-        .recaptchaNotEnabled: "RECAPTCHA_NOT_ENABLED"
+        .recaptchaNotEnabled: "RECAPTCHA_NOT_ENABLED",
     ]
 
     static let stringToCodeMap: [String: Code] = Dictionary(
