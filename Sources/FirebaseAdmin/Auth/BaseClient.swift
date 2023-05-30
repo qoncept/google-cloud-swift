@@ -40,18 +40,11 @@ extension Auth {
 
                 let string = error.error.message
 
-                var codeString = string.trimmingCharacters(in: .whitespaces)
-                var messageString: String? = nil
-                if let index = string.firstIndex(of: ":") {
-                    codeString = string[..<index].trimmingCharacters(in: .whitespaces)
-                    messageString = string[string.index(after: index)...].trimmingCharacters(in: .whitespaces)
-                }
+                guard let error = FirebaseAuthError(
+                    from: string
+                ) else { throw error }
 
-                guard let code = FirebaseAuthError.Code(rawValue: codeString) else { throw error }
-
-                return .failure(
-                    FirebaseAuthError(code: code, message: messageString)
-                )
+                return .failure(error)
             }
         }
 

@@ -1,27 +1,10 @@
 import Foundation
 
-public struct UpdateUserError: Error {
-    public enum Code {
+public struct UpdateUserError: CodeAndMessageError {
+    public enum Code: String, Sendable {
         case invalidIDToken
         case emailExists
         case weakPassword
-
-        public init?(from code: FirebaseAuthError.Code) {
-            switch code {
-            case .invalidIDToken: self = .invalidIDToken
-            case .emailExists: self = .emailExists
-            case .weakPassword: self = .weakPassword
-            default: return nil
-            }
-        }
-
-        public var authError: FirebaseAuthError.Code {
-            switch self {
-            case .invalidIDToken: return .invalidIDToken
-            case .emailExists: return .emailExists
-            case .weakPassword: return .weakPassword
-            }
-        }
     }
 
     public init(
@@ -35,19 +18,14 @@ public struct UpdateUserError: Error {
     public var code: Code
     public var message: String?
 
-    public init?(from error: FirebaseAuthError) {
-        guard let code = Code(from: error.code) else { return nil }
-        self.init(
-            code: code,
-            message: error.message
-        )
+    public func toAuthError() -> FirebaseAuthError {
+        convert()!
     }
+}
 
-    public var authError: FirebaseAuthError {
-        FirebaseAuthError(
-            code: code.authError,
-            message: message
-        )
+extension FirebaseAuthError {
+    public func toUpdateUserError() throws -> UpdateUserError {
+        try convertOrThrow()
     }
 }
 

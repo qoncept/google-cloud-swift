@@ -162,10 +162,7 @@ public struct Auth {
             path: path, payload: properties.toRaw(uid: uid), responseType: UpdateUserResponse.self
         )
 
-        return try ret.map { (_) in () }.tryMapError {
-            guard let error = UpdateUserError(from: $0) else { throw $0 }
-            return error
-        }
+        return try ret.map { (_) in () }.tryMapError { try $0.toUpdateUserError() }
     }
 
     public func setCustomUserClaims(_ claims: [String: String], for uid: String) async throws {
