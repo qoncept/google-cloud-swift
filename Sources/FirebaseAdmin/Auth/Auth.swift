@@ -62,15 +62,15 @@ public struct Auth {
         return res.localId
     }
 
-    public func getUser(for uid: String) async throws -> UserRecord? {
-        return try await getUser(request: .init(localId: [uid]))
+    public func user(for uid: String) async throws -> UserRecord? {
+        return try await user(request: .init(localId: [uid]))
     }
 
-    public func getUser(byEmail email: String) async throws -> UserRecord? {
-        return try await getUser(request: .init(email: [email]))
+    public func user(byEmail email: String) async throws -> UserRecord? {
+        return try await user(request: .init(email: [email]))
     }
 
-    private func getUser(request: GetUserRequest) async throws -> UserRecord? {
+    private func user(request: GetUserRequest) async throws -> UserRecord? {
         let path = "/accounts:lookup"
         return try await baseClient.post(
             path: path, payload: request, responseType: GetUserResponse.self
