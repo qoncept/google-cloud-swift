@@ -17,20 +17,19 @@ public struct AuthorizedClient: Sendable {
     public var baseURL: URL
     public var credentialStore: CredentialStore
     public var httpClient: AsyncHTTPClient.HTTPClient
-    public var isEmulator: Bool
     private let logger: Logger = .init(label: "AuthorizedClient")
 
-    public init(baseURL: URL, credentialStore: CredentialStore, httpClient: HTTPClient, isEmulator: Bool = false) {
+    public init(
+        baseURL: URL,
+        credentialStore: CredentialStore,
+        httpClient: HTTPClient
+    ) {
         self.baseURL = baseURL
         self.credentialStore = credentialStore
         self.httpClient = httpClient
-        self.isEmulator = isEmulator
     }
 
     private func token() async throws -> String {
-        if isEmulator {
-            return emulatorToken
-        }
         return try await credentialStore.accessToken()
     }
 

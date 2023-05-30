@@ -34,8 +34,7 @@ public struct TasksQueue: Sendable {
         authorizedClient = .init(
             baseURL: defaultAPIEndpoint,
             credentialStore: credentialStore,
-            httpClient: client,
-            isEmulator: false
+            httpClient: client
         )
     }
 
