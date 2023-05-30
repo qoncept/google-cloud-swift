@@ -34,17 +34,15 @@ extension Auth {
                 )
                 return .success(response)
             } catch {
-                guard let error = error as? GoogleCloudBase.ErrorResponse else {
-                    throw error
+                if let error = error as? GoogleCloudBase.ErrorResponse {
+                    let string = error.error.message
+
+                    if let error = FirebaseAuthError(from: string) {
+                        return .failure(error)
+                    }
                 }
 
-                let string = error.error.message
-
-                guard let error = FirebaseAuthError(
-                    from: string
-                ) else { throw error }
-
-                return .failure(error)
+                throw error
             }
         }
 

@@ -196,6 +196,34 @@ final class AuthTest: XCTestCase {
         XCTAssertEqual(u.photoURL, "https://example.com/cat.jpeg")
     }
 
+    func testUpdateUserErrorEmailExists() async throws {
+        let auth = try makeAuth()
+
+        let email0 = "testUpdateUserErrorEmailExists.0@example.com"
+        let email1 = "testUpdateUserErrorEmailExists.1@example.com"
+
+        _ = try await auth.createUser(.init(email: email0, password: "123456")).get()
+        let id = try await auth.createUser(.init(email: email1, password: "123456")).get()
+
+        let result = try await auth.updateUser(.init(email: email0), for: id)
+        let error: UpdateUserError = try XCTUnwrap(result.failure)
+        XCTAssertEqual(error.code, .emailExists)
+        XCTAssertNil(error.message)
+    }
+
+    func testUpdateUserErrorWeakPassword() async throws {
+        let auth = try makeAuth()
+
+        let id = try await auth.createUser(.init(
+            email: "testUpdateUserErrorWeakPassword@example.com",
+            password: "123456"
+        )).get()
+        let result = try await auth.updateUser(.init(password: "123"), for: id)
+        let error: UpdateUserError = try XCTUnwrap(result.failure)
+        XCTAssertEqual(error.code, .weakPassword)
+        XCTAssertEqual(error.message, "Password should be at least 6 characters")
+    }
+
     func testSetCustomClaims() async throws {
         let auth = try makeAuth()
 

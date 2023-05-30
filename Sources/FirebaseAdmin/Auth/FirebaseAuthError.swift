@@ -74,19 +74,25 @@ public struct FirebaseAuthError: CodeAndMessageError {
     }
 
     public init?(from string: String) {
-        var codeString = string.trimmingCharacters(in: .whitespaces)
-        var messageString: String? = nil
+        var codeString = string[...]
+        var messageString: Substring? = nil
         if let index = codeString.firstIndex(of: ":") {
-            codeString = codeString[..<index].trimmingCharacters(in: .whitespaces)
-            messageString = codeString[codeString.index(after: index)...].trimmingCharacters(in: .whitespaces)
+            let messageIndex = string.index(after: index)
+            codeString = string[..<index]
+            messageString = string[messageIndex...]
         }
 
-        guard let code = Code(rawValue: codeString) else { return nil }
+        guard let code = Self.stringToCodeMap[
+            codeString.trimmingCharacters(in: .whitespaces)
+        ] else { return nil }
 
-        self.init(code: code, message: messageString)
+        self.init(
+            code: code,
+            message: messageString?.trimmingCharacters(in: .whitespaces)
+        )
     }
 
-    static let codeStringMap: [Code: String] = [
+    static let codeToStringMap: [Code: String] = [
         .billingNotEnabled: "BILLING_NOT_ENABLED",
         .claimsTooLarge: "CLAIMS_TOO_LARGE",
         .configurationExists: "CONFIGURATION_EXISTS",
@@ -149,8 +155,8 @@ public struct FirebaseAuthError: CodeAndMessageError {
         .recaptchaNotEnabled: "RECAPTCHA_NOT_ENABLED"
     ]
 
-    static let stringCodeMap: [String: Code] = Dictionary(
-        codeStringMap.map { ($0.value, $0.key) }
+    static let stringToCodeMap: [String: Code] = Dictionary(
+        codeToStringMap.map { ($0.value, $0.key) }
     ) { $1 }
 }
 
