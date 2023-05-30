@@ -67,7 +67,7 @@ final class AuthTest: XCTestCase {
         let uid = try await XCTAssertNoThrow {
             try await auth.createUser(user: UserToCreate(
                 email: "testGetUser@example.com",
-                password: "012345"
+                password: "111111"
             ))
         }
 
@@ -77,6 +77,7 @@ final class AuthTest: XCTestCase {
         XCTAssertEqual(result.uid, uid)
         XCTAssertEqual(result.email, "testGetUser@example.com".lowercased())
         XCTAssertEqual(result.providers.first?.providerID, "password")
+        XCTAssertTrue(try XCTUnwrap(result.passwordHash).hasSuffix("password=111111"))
     }
 
     func testGetUserNotFound() async throws {

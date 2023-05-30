@@ -44,6 +44,8 @@ public struct UserRecord: Decodable {
 
     public var providers: [UserInfo]
 
+    public var passwordHash: String?
+
     @CustomClaims public var customClaims: [String: String]
     @StringMilliUnixOptionalDate public var tokensValidAfterAt: Date?
 
@@ -63,6 +65,7 @@ public struct UserRecord: Decodable {
         case lastRefreshAt
 
         case providers = "providerUserInfo"
+        case passwordHash
         case customClaims = "customAttributes"
         case tokensValidAfterAt = "validSince"
     }
