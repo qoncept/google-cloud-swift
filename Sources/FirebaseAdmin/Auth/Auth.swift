@@ -133,7 +133,7 @@ public struct Auth {
     }
 
     public func createUser(_ user: UserToCreate) async throws -> Result<String, CreateUserError> {
-        switch try user.validatedRequest() {
+        switch user.validatedRequest() {
         case .failure(let e): return .failure(e)
         case .success: break
         }
