@@ -8,12 +8,14 @@ private let testingProjectID = "testing-project-id"
 final class AuthTest: XCTestCase {
     private static let client = AsyncHTTPClient.HTTPClient(eventLoopGroupProvider: .createNew)
 
+    private static var emulatorURL: URL? = Auth.emulatorBaseURL()
+
     override class func setUp() {
         super.setUp()
         initLogger()
 
-        if let authEmulatorHost = ProcessInfo.processInfo.environment[emulatorHostEnvVar] {
-            let endpoint = "http://\(authEmulatorHost)/emulator/v1/projects/\(testingProjectID)/accounts"
+        if let url = Self.emulatorURL {
+            let endpoint = Auth.emulatorAPIBaseURL(url: url)!.appendingPathComponent("projects/\(testingProjectID)/accounts")
             do {
                 let request = try HTTPClient.Request(url: endpoint, method: .DELETE)
                 _ = try client.execute(request: request).wait()
@@ -35,7 +37,7 @@ final class AuthTest: XCTestCase {
 
     override func setUpWithError() throws {
         try super.setUpWithError()
-        try XCTSkipIf(ProcessInfo.processInfo.environment[emulatorHostEnvVar] == nil, "AuthTest uses Firebase Auth Emulator.")
+        try XCTSkipIf(Self.emulatorURL == nil, "AuthTest uses Firebase Auth Emulator.")
     }
 
     private func makeAuth() throws -> Auth {

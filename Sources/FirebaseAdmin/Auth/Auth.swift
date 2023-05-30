@@ -12,28 +12,105 @@ struct AuthError: Error, CustomStringConvertible, LocalizedError {
 }
 
 public struct Auth {
+    public static let productionBaseURL: URL = URL(string: "https://identitytoolkit.googleapis.com/v1")!
+
+    public static let emulatorHostEnvVar = "FIREBASE_AUTH_EMULATOR_HOST"
+
+    public static func emulatorBaseURL(host: String) -> URL {
+        URL(string: "http://\(host)/identitytoolkit.googleapis.com/v1")!
+    }
+
+    public static func emulatorBaseURL() -> URL? {
+        guard let host = ProcessInfo.processInfo.environment[Auth.emulatorHostEnvVar] else { return nil }
+        return emulatorBaseURL(host: host)
+    }
+
+    public static func emulatorAPIBaseURL(url: URL) -> URL? {
+        guard let c = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+        guard var host = c.host else { return nil }
+        if let port = c.port {
+            host += ":" + port.description
+        }
+        return URL(string: "http://\(host)/emulator/v1")
+    }
+
+    private static func projectID(from credentialStore: CredentialStore) -> String? {
+        guard let richCredential = credentialStore.compilersafeCredential as? any RichCredential else {
+            return nil
+        }
+        return richCredential.projectID
+    }
+    
     private var baseClient: BaseClient
     private let keySource: HTTPKeySource
-    private let projectID: String
+
     public init(
         credentialStore: CredentialStore,
         client: AsyncHTTPClient.HTTPClient,
-        projectID: String? = nil
+        baseURL paramBaseURL: URL? = nil,
+        projectID paramProjectID: String? = nil
     ) throws {
-        if let projectID = projectID {
-            self.projectID = projectID
-        } else if let c = credentialStore.compilersafeCredential as? RichCredential {
-            self.projectID = c.projectID
+        var credentialStore = credentialStore
+        var baseURL: URL
+        let projectID: String? = paramProjectID ??
+            Self.projectID(from: credentialStore)
+
+        if let paramBaseURL {
+            baseURL = paramBaseURL
+        } else {
+            if let emulator = Self.emulatorBaseURL() {
+                baseURL = emulator
+                credentialStore = CredentialStore(
+                    credential: .makeEmulatorCredential()
+                )
+            } else {
+                baseURL = Self.productionBaseURL
+            }
+        }
+
+        let authorizedClient = AuthorizedClient(
+            baseURL: baseURL,
+            credentialStore: credentialStore,
+            httpClient: client
+        )
+
+        try self.init(
+            authorizedClient: authorizedClient,
+            projectID: projectID
+        )
+    }
+
+    public init(
+        authorizedClient: AuthorizedClient,
+        projectID paramProjectID: String? = nil
+    ) throws {
+        let projectID: String
+        if let paramProjectID {
+            projectID = paramProjectID
+        } else if let id = Self.projectID(from: authorizedClient.credentialStore) {
+            projectID = id
         } else {
             throw AuthError(message: "projectID must be provided if the credential doesn't have it.")
         }
-        baseClient = BaseClient(credentialStore: credentialStore, client: client, projectID: self.projectID)
-        keySource = HTTPKeySource(client: client)
+
+        baseClient = BaseClient(
+            authorizedClient: authorizedClient,
+            projectID: projectID,
+            tenantID: nil
+        )
+        keySource = HTTPKeySource(client: authorizedClient.httpClient)
     }
 
+    public var authorizedClient: AuthorizedClient { baseClient.authorizedClient }
+    
+    public var projectID: String { baseClient.projectID }
+
     public var tenantID: String? {
-        didSet {
-            baseClient.tenantID = tenantID
+        get {
+            baseClient.tenantID
+        }
+        set {
+            baseClient.tenantID = newValue
         }
     }
 

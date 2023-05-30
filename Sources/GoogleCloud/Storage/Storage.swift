@@ -15,22 +15,21 @@ public struct Storage: Sendable {
         credentialStore: CredentialStore,
         client: AsyncHTTPClient.HTTPClient
     ) {
+        var credentialStore = credentialStore
         let baseURL: URL
-        let isEmulator: Bool
+
         if let emulatorHost = ProcessInfo.processInfo.environment[storageEmulatorHostEnvVar] {
             baseURL = URL(string: "http://\(emulatorHost)/")!
-            isEmulator = true
+            credentialStore = CredentialStore(credential: .makeEmulatorCredential())
         } else {
             baseURL = defaultAPIEndpoint
-            isEmulator = false
         }
 
         self.credentialStore = credentialStore
         authorizedClient = .init(
             baseURL: baseURL,
             credentialStore: credentialStore,
-            httpClient: client,
-            isEmulator: isEmulator
+            httpClient: client
         )
     }
 

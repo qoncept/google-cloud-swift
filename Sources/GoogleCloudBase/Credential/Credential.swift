@@ -88,6 +88,10 @@ extension Credential where Self == Never {
             throw CredentialError(message: "Invalid contents in the credentials file")
         }
     }
+
+    public static func makeEmulatorCredential() -> Credential {
+        return EmulatorCredential()
+    }
 }
 
 struct CredentialErrorFrame: Decodable, Error, CustomStringConvertible, LocalizedError {
