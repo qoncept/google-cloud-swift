@@ -1,3 +1,5 @@
+public protocol FirebaseAuthAPIError: CodeAndMessageError {}
+
 public struct FirebaseAuthError: CodeAndMessageError {
     public enum Code: String, Sendable {
         /*
@@ -101,6 +103,14 @@ public struct FirebaseAuthError: CodeAndMessageError {
             code: code,
             message: messageString?.trimmingCharacters(in: .whitespaces)
         )
+    }
+
+    public init(_ other: some FirebaseAuthAPIError) {
+        do {
+            try self.init(castFromOrThrow: other)
+        } catch {
+            fatalError("invalid code: \(other.code)")
+        }
     }
 
     static let codeToStringMap: [Code: String] = [

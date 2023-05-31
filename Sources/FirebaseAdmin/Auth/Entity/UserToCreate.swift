@@ -1,6 +1,6 @@
 import Foundation
 
-public struct CreateUserError: CodeAndMessageError {
+public struct CreateUserError: FirebaseAuthAPIError {
     public enum Code: String {
         case invalidUID
         case invalidDisplayName
@@ -18,12 +18,6 @@ public struct CreateUserError: CodeAndMessageError {
 
     public var code: Code
     public var message: String?
-
-    public func toAuth() -> FirebaseAuthError { convert()! }
-}
-
-extension FirebaseAuthError {
-    public func toCreateUser() throws -> CreateUserError { try convertOrThrow() }
 }
 
 struct UserToCreateError: Error {

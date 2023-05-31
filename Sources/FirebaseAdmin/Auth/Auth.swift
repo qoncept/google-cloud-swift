@@ -139,7 +139,7 @@ public struct Auth {
         }
         let path = "/accounts"
         let res = try await baseClient.post(path: path, payload: user, responseType: UpdateUserResponse.self)
-        return try res.map { $0.localId }.tryMapError { try $0.toCreateUser() }
+        return try res.map { $0.localId }.tryMapError { try CreateUserError(castFromOrThrow: $0) }
     }
 
     public func user(for uid: String) async throws -> UserRecord? {
@@ -165,7 +165,7 @@ public struct Auth {
             path: path, payload: properties.toRaw(uid: uid), responseType: UpdateUserResponse.self
         )
 
-        return try ret.map { (_) in () }.tryMapError { try $0.toUpdateUser() }
+        return try ret.map { (_) in () }.tryMapError { try UpdateUserError(castFromOrThrow: $0) }
     }
 
     public func setCustomUserClaims(_ claims: [String: String], for uid: String) async throws {

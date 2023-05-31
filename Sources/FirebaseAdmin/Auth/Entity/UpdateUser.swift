@@ -21,18 +21,7 @@ public struct UpdateUserError: CodeAndMessageError {
 
     public var code: Code
     public var message: String?
-
-    public func toAuth() -> FirebaseAuthError {
-        convert()!
-    }
 }
-
-extension FirebaseAuthError {
-    public func toUpdateUser() throws -> UpdateUserError {
-        try convertOrThrow()
-    }
-}
-
 
 // interface UpdateRequest
 // https://github.com/firebase/firebase-admin-node/blob/master/src/auth/auth-config.ts#L129

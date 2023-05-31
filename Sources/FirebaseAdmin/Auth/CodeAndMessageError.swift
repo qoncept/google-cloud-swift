@@ -10,6 +10,13 @@ public protocol CodeAndMessageError: Error & CustomStringConvertible & Localized
 }
 
 extension CodeAndMessageError {
+    public init(castFromOrThrow other: some CodeAndMessageError) throws {
+        guard let newCode = Self.Code(rawValue: other.code.rawValue) else {
+            throw other
+        }
+        self.init(code: newCode, message: other.message)
+    }
+
     public var description: String {
         var str = code.rawValue
         if let message {
@@ -20,17 +27,5 @@ extension CodeAndMessageError {
 
     public var errorDescription: String? {
         description
-    }
-
-    public func convert<NewError>(to type: NewError.Type = NewError.self) -> NewError? where NewError: CodeAndMessageError {
-        guard let newCode = NewError.Code(rawValue: code.rawValue) else { return nil }
-        return NewError(code: newCode, message: message)
-    }
-
-    public func convertOrThrow<NewError>(to type: NewError.Type = NewError.self) throws -> NewError where NewError: CodeAndMessageError {
-        guard let newError = convert(to: type) else {
-            throw self
-        }
-        return newError
     }
 }
