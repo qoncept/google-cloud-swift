@@ -110,6 +110,49 @@ final class AuthTest: XCTestCase {
         XCTAssertNil(user)
     }
 
+    func testGetUsers() async throws {
+        let auth = try makeAuth()
+
+        let ids = [
+            try await auth.createUser(UserToCreate(
+                email: "testGetUsers.0@example.com",
+                password: "123456"
+            )),
+            try await auth.createUser(UserToCreate(
+                email: "testGetUsers.1@example.com",
+                password: "123456"
+            )),
+            try await auth.createUser(UserToCreate(
+                email: "testGetUsers.2@example.com",
+                password: "123456"
+            )),
+            try await auth.createUser(UserToCreate(
+                email: "testGetUsers.3@example.com",
+                password: "123456"
+            )),
+            try await auth.createUser(UserToCreate(
+                email: "testGetUsers.4@example.com",
+                password: "123456"
+            )),
+            try await auth.createUser(UserToCreate(
+                email: "testGetUsers.5@example.com",
+                password: "123456"
+            ))
+        ]
+
+        let users = try await auth.users(for: [
+            .uid(ids[0]),
+            .uid(ids[1]),
+            .email("testGetUsers.1@example.com".lowercased()),
+            .email("testGetUsers.3@example.com".lowercased())
+        ])
+        
+        XCTAssertEqual(
+            Set(users.map { $0.uid }),
+            [ids[0], ids[1], ids[3]]
+        )
+    }
+
     func testUpdateUserConsistentID() async throws {
         let auth = try makeAuth()
         let uid = try await auth.createUser(
