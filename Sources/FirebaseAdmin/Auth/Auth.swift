@@ -155,6 +155,8 @@ public struct Auth {
     }
 
     public func users(for queries: [UserIdentityQuery]) async throws -> [UserRecord] {
+        if queries.isEmpty { return [] }
+        
         let path = "/accounts:lookup"
         var request = GetUsersRequest()
         for query in queries {

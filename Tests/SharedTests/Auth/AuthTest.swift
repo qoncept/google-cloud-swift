@@ -153,6 +153,14 @@ final class AuthTest: XCTestCase {
         )
     }
 
+    func testGetUsersEmpty() async throws {
+        let auth = try makeAuth()
+
+        let users = try await auth.users(for: [])
+
+        XCTAssertEqual(users.count, 0)
+    }
+
     func testUpdateUserConsistentID() async throws {
         let auth = try makeAuth()
         let uid = try await auth.createUser(
