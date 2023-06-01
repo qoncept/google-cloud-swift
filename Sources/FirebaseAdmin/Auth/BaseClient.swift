@@ -35,9 +35,9 @@ extension Auth {
                 return .success(response)
             } catch {
                 if let error = error as? GoogleCloudBase.ErrorResponse {
-                    let string = error.error.message
-
-                    if let error = FirebaseAuthError(from: string) {
+                    if let error = FirebaseAuthError.decodeErrorResponseMessage(
+                        message: error.error.message
+                    ) {
                         return .failure(error)
                     }
                 }

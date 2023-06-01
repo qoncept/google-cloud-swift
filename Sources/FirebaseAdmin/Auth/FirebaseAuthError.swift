@@ -86,7 +86,15 @@ public struct FirebaseAuthError: CodeAndMessageError {
         self.message = message
     }
 
-    public init?(from string: String) {
+    public init(_ other: some FirebaseAuthAPIError) {
+        do {
+            try self.init(castFromOrThrow: other)
+        } catch {
+            fatalError("invalid code: \(other.code)")
+        }
+    }
+
+    public static func decodeErrorResponseMessage(message string: String) -> FirebaseAuthError? {
         var codeString = string[...]
         var messageString: Substring? = nil
         if let index = codeString.firstIndex(of: ":") {
@@ -99,18 +107,10 @@ public struct FirebaseAuthError: CodeAndMessageError {
             codeString.trimmingCharacters(in: .whitespaces)
         ] else { return nil }
 
-        self.init(
+        return FirebaseAuthError(
             code: code,
             message: messageString?.trimmingCharacters(in: .whitespaces)
         )
-    }
-
-    public init(_ other: some FirebaseAuthAPIError) {
-        do {
-            try self.init(castFromOrThrow: other)
-        } catch {
-            fatalError("invalid code: \(other.code)")
-        }
     }
 
     static let codeToStringMap: [Code: String] = [
