@@ -10,7 +10,8 @@ public protocol CodeAndMessageError: Error & CustomStringConvertible & Localized
 }
 
 extension CodeAndMessageError {
-    public init(castFromOrThrow other: some CodeAndMessageError) throws {
+    /// Cast an argument error. If it fails, the given error itself is thrown.
+    public init(_ other: some CodeAndMessageError) throws {
         guard let newCode = Self.Code(rawValue: other.code.rawValue) else {
             throw other
         }

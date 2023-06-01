@@ -87,10 +87,12 @@ public struct FirebaseAuthError: CodeAndMessageError {
     }
 
     public init(_ other: some FirebaseAuthAPIError) {
+        let code = other.code
+        let other = other as any CodeAndMessageError
         do {
-            try self.init(castFromOrThrow: other)
+            try self.init(other)
         } catch {
-            fatalError("invalid code: \(other.code)")
+            fatalError("invalid code: \(code)")
         }
     }
 
