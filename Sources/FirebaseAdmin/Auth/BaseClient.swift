@@ -22,15 +22,28 @@ extension Auth {
             path: String,
             payload: Body,
             responseType: Response.Type
-        ) async throws -> Response {
-            try await authorizedClient.post(
-                path: makeUserMtgPath(path: path),
-                headers: [
-                    "X-Goog-User-Project": projectID,
-                ],
-                payload: payload,
-                responseType: responseType
-            )
+        ) async throws -> Result<Response, FirebaseAuthError> {
+            do {
+                let response = try await authorizedClient.post(
+                    path: makeUserMtgPath(path: path),
+                    headers: [
+                        "X-Goog-User-Project": projectID,
+                    ],
+                    payload: payload,
+                    responseType: responseType
+                )
+                return .success(response)
+            } catch {
+                if let error = error as? GoogleCloudBase.ErrorResponse {
+                    if let error = FirebaseAuthError.decodeErrorResponseMessage(
+                        message: error.error.message
+                    ) {
+                        return .failure(error)
+                    }
+                }
+
+                throw error
+            }
         }
 
         private func makeUserMtgPath(path: String) -> String {

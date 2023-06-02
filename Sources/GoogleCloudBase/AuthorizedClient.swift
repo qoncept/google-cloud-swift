@@ -182,16 +182,16 @@ public struct AuthorizedClient: Sendable {
     }
 }
 
-struct ErrorResponse: Decodable, Error, CustomStringConvertible, LocalizedError {
-    struct Error: Decodable {
-        var code: Int
-        var message: String
-        var status: String?
-        var errors: [[String: String]]?
+public struct ErrorResponse: Decodable, Error, CustomStringConvertible, LocalizedError {
+    public struct Error: Decodable {
+        public var code: Int
+        public var message: String
+        public var status: String?
+        public var errors: [[String: String]]?
     }
-    var error: Error
-    var description: String { "\(error.message)(\(error.code))" }
-    var errorDescription: String? { description }
+    public var error: Error
+    public var description: String { "\(error.message)(\(error.code))" }
+    public var errorDescription: String? { description }
 }
 
 extension URL {

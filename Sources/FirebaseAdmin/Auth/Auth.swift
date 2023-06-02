@@ -132,11 +132,14 @@ public struct Auth {
         return token
     }
 
-    public func createUser(_ user: UserToCreate) async throws -> String {
-        try user.validatedRequest()
+    public func createUser(_ user: UserToCreate) async throws -> Result<String, CreateUserError> {
+        switch user.validatedRequest() {
+        case .failure(let e): return .failure(e)
+        case .success: break
+        }
         let path = "/accounts"
         let res = try await baseClient.post(path: path, payload: user, responseType: UpdateUserResponse.self)
-        return res.localId
+        return try res.map { $0.localId }.tryMapError { try CreateUserError($0) }
     }
 
     public func user(for uid: String) async throws -> UserRecord? {
@@ -149,9 +152,10 @@ public struct Auth {
 
     private func user(request: GetUserRequest) async throws -> UserRecord? {
         let path = "/accounts:lookup"
-        return try await baseClient.post(
+        let res = try await baseClient.post(
             path: path, payload: request, responseType: GetUserResponse.self
-        ).users?.first
+        ).get()
+        return res.users?.first
     }
 
     public func users(for queries: [UserIdentityQuery]) async throws -> [UserRecord] {
@@ -164,15 +168,17 @@ public struct Auth {
         }
         return try await baseClient.post(
             path: path, payload: request, responseType: GetUsersResponse.self
-        ).users ?? []
+        ).get().users ?? []
     }
 
-    public func updateUser(_ properties: UpdateUserProperties, for uid: String) async throws {
+    public func updateUser(_ properties: UpdateUserProperties, for uid: String) async throws -> Result<Void, UpdateUserError> {
         let path = "/accounts:update"
 
-        _ = try await baseClient.post(
+        let ret = try await baseClient.post(
             path: path, payload: properties.toRaw(uid: uid), responseType: UpdateUserResponse.self
         )
+
+        return try ret.map { (_) in () }.tryMapError { try UpdateUserError($0) }
     }
 
     public func setCustomUserClaims(_ claims: [String: String], for uid: String) async throws {
