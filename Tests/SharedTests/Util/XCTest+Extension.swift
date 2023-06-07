@@ -22,6 +22,22 @@ extension Result where Failure == Never {
     }
 }
 
+extension Result {
+    var success: Success? {
+        switch self {
+        case .success(let x): return x
+        default: return nil
+        }
+    }
+
+    var failure: Failure? {
+        switch self {
+        case .failure(let x): return x
+        default: return nil
+        }
+    }
+}
+
 func XCTAssertThrowsError<T>(_ expression: @Sendable () async throws -> T, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line, _ errorHandler: (_ error: Error) -> Void = { _ in }) async {
     let v = await Result { try await expression() }
     XCTAssertThrowsError(try v.get(), message(), file: file, line: line, errorHandler)

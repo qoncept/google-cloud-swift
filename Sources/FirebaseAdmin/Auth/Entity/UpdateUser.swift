@@ -1,9 +1,26 @@
 import Foundation
 
-struct UpdateUserError: Swift.Error & CustomStringConvertible {
-    init(_ message: String) { self.message = message }
-    var message: String
-    var description: String { message }
+public struct UpdateUserError: CodeAndMessageError {
+    public enum Code: String, Sendable {
+//        case invalidUID
+//        case invalidDisplayName
+        case invalidEmail
+        case emailExists
+        case invalidPhoneNumber
+//        case invalidPhotoURL
+        case weakPassword
+    }
+
+    public init(
+        code: UpdateUserError.Code,
+        message: String?
+    ) {
+        self.code = code
+        self.message = message
+    }
+
+    public var code: Code
+    public var message: String?
 }
 
 // interface UpdateRequest

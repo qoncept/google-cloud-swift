@@ -1,5 +1,25 @@
 import Foundation
 
+public struct CreateUserError: FirebaseAuthAPIError {
+    public enum Code: String {
+        case invalidUID
+        case invalidDisplayName
+        case invalidEmail
+        case emailExists
+        case invalidPhoneNumber
+        case invalidPhotoURL
+        case weakPassword
+    }
+
+    public init(code: CreateUserError.Code, message: String?) {
+        self.code = code
+        self.message = message
+    }
+
+    public var code: Code
+    public var message: String?
+}
+
 struct UserToCreateError: Error {
     var message: String
 }
@@ -21,81 +41,131 @@ public struct UserToCreate: Encodable {
     public var photoUrl: String?
     public var password: String?
 
-    func validatedRequest() throws {
+    func validatedRequest() -> Result<Void, CreateUserError> {
         if let localId = localId {
-            try Self.validateUID(uid: localId)
+            switch Self.validateUID(uid: localId) {
+            case .failure(let e): return .failure(e)
+            case .success: break
+            }
         }
 
         if let displayName = displayName {
-            try Self.validateDisplayName(displayName: displayName)
+            switch Self.validateDisplayName(displayName: displayName) {
+            case .failure(let e): return .failure(e)
+            case .success: break
+            }
         }
 
         if let email = email {
-            try Self.validateEmail(email: email)
+            switch Self.validateEmail(email: email) {
+            case .failure(let e): return .failure(e)
+            case .success: break
+            }
         }
 
         if let phoneNumber = phoneNumber {
-            try Self.validatePhone(phone: phoneNumber)
+            switch Self.validatePhone(phone: phoneNumber) {
+            case .failure(let e): return .failure(e)
+            case .success: break
+            }
         }
 
         if let photoUrl = photoUrl {
-            try Self.validatePhotoURL(photoURL: photoUrl)
+            switch Self.validatePhotoURL(photoURL: photoUrl) {
+            case .failure(let e): return .failure(e)
+            case .success: break
+            }
         }
 
         if let password = password {
-            try Self.validatePassword(password: password)
+            switch Self.validatePassword(password: password) {
+            case .failure(let e): return .failure(e)
+            case .success: break
+            }
         }
+
+        return .success(())
     }
 
     // MARK: - static
 
-    static func validateUID(uid: String) throws {
+    static func validateUID(uid: String) -> Result<Void, CreateUserError> {
         if uid.isEmpty {
-            throw UserToCreateError(message: "uid must be a non-empty string")
+            return .failure(
+                .init(code: .invalidUID, message: "uid must be a non-empty string")
+            )
         }
 
         if uid.utf8.count > 128 {
-            throw UserToCreateError(message: "uid string must not be longer than 128 characters")
+            return .failure(
+                .init(code: .invalidUID, message: "uid string must not be longer than 128 characters")
+            )
         }
+
+        return .success(())
     }
 
-    static func validateDisplayName(displayName: String) throws {
+    static func validateDisplayName(displayName: String) -> Result<Void, CreateUserError> {
         if displayName.isEmpty {
-            throw UserToCreateError(message: "display name must be a non-empty string")
+            return .failure(
+                .init(code: .invalidDisplayName, message: "display name must be a non-empty string")
+            )
         }
+
+        return .success(())
     }
 
-    static func validateEmail(email: String) throws {
+    static func validateEmail(email: String) -> Result<Void, CreateUserError> {
         if email.isEmpty {
-            throw UserToCreateError(message: "email must be a non-empty string")
+            return .failure(
+                .init(code: .invalidEmail, message: "email must be a non-empty string")
+            )
         }
 
         let parts = email.split(separator: "@")
         guard parts.count == 2, parts[1].contains(".") else {
-            throw UserToCreateError(message: "malformed email string: \(email)")
+            return .failure(
+                .init(code: .invalidEmail, message: "malformed email string: \(email)")
+            )
         }
+
+        return .success(())
     }
 
     static let e164Regex = try! NSRegularExpression(pattern: #"\+.*[0-9A-Za-z]"#)
-    static func validatePhone(phone: String) throws {
+    static func validatePhone(phone: String) -> Result<Void, CreateUserError> {
         if phone.isEmpty {
-            throw UserToCreateError(message: "phone number must be a non-empty string")
+            return .failure(
+                .init(code: .invalidPhoneNumber, message: "phone number must be a non-empty string")
+            )
         }
 
         if e164Regex.numberOfMatches(in: phone, options: [], range: NSRange(location: 0, length: phone.count)) == 0 {
-            throw UserToCreateError(message: "phone number must be a valid, E.164 compliant identifier")
+            return .failure(
+                .init(code: .invalidPhoneNumber, message: "phone number must be a valid, E.164 compliant identifier")
+            )
         }
+
+        return .success(())
     }
 
-    static func validatePhotoURL(photoURL: String) throws {
+    static func validatePhotoURL(photoURL: String) -> Result<Void, CreateUserError> {
         if photoURL.isEmpty {
-            throw UserToCreateError(message: "photoURL must be a non-empty string")
+            return .failure(
+                .init(code: .invalidPhotoURL, message: "photoURL must be a non-empty string")
+            )
         }
+
+        return .success(())
     }
 
-    static func validatePassword(password: String) throws {
+    static func validatePassword(password: String) -> Result<Void, CreateUserError> {
         if password.utf8.count < 6 {
-            throw UserToCreateError(message: "password must be a string at least 6 characters long")
+            return .failure(
+                .init(code: .weakPassword, message: "password must be a string at least 6 characters long")
+            )
         }
+
+        return .success(())
     }
 }

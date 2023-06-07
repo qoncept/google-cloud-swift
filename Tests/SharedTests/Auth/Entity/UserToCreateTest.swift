@@ -2,45 +2,63 @@
 import XCTest
 
 final class UserToCreateTest: XCTestCase {
-    func testPasswordValidation() {
+    func testPasswordValidation() throws {
         let c1 = UserToCreate(password: "012345")
-        XCTAssertNoThrow(try c1.validatedRequest())
+        XCTAssertNil(c1.validatedRequest().failure)
 
         let c2 = UserToCreate(password: "short")
-        XCTAssertThrowsError(try c2.validatedRequest())
+        let error = try XCTUnwrap(c2.validatedRequest().failure)
+        XCTAssertEqual(error.code, .weakPassword)
+        XCTAssertEqual(error.message, "password must be a string at least 6 characters long")
     }
 
-    func testPhoneNumberValidation() {
+    func testPhoneNumberValidation() throws {
         let c1 = UserToCreate(phoneNumber: "+15555550100")
-        XCTAssertNoThrow(try c1.validatedRequest())
+        XCTAssertNil(c1.validatedRequest().failure)
 
         let c2 = UserToCreate(phoneNumber: "15555550100")
-        XCTAssertThrowsError(try c2.validatedRequest())
+        var error = try XCTUnwrap(c2.validatedRequest().failure)
+        XCTAssertEqual(error.code, .invalidPhoneNumber)
+        XCTAssertEqual(error.message, "phone number must be a valid, E.164 compliant identifier")
 
         let c3 = UserToCreate(phoneNumber: "+_!@#$")
-        XCTAssertThrowsError(try c3.validatedRequest())
+        error = try XCTUnwrap(c3.validatedRequest().failure)
+        XCTAssertEqual(error.code, .invalidPhoneNumber)
+        XCTAssertEqual(error.message, "phone number must be a valid, E.164 compliant identifier")
 
         let c4 = UserToCreate(phoneNumber: "")
-        XCTAssertThrowsError(try c4.validatedRequest())
+        error = try XCTUnwrap(c4.validatedRequest().failure)
+        XCTAssertEqual(error.code, .invalidPhoneNumber)
+        XCTAssertEqual(error.message, "phone number must be a non-empty string")
     }
 
-    func testEmailValidation() {
+    func testEmailValidation() throws {
         let c1 = UserToCreate(email: "a@a.com")
-        XCTAssertNoThrow(try c1.validatedRequest())
+        XCTAssertNil(c1.validatedRequest().failure)
 
         let c2 = UserToCreate(email: "")
-        XCTAssertThrowsError(try c2.validatedRequest())
+        var error = try XCTUnwrap(c2.validatedRequest().failure)
+        XCTAssertEqual(error.code, .invalidEmail)
+        XCTAssertEqual(error.message, "email must be a non-empty string")
 
         let c3 = UserToCreate(email: "a")
-        XCTAssertThrowsError(try c3.validatedRequest())
+        error = try XCTUnwrap(c3.validatedRequest().failure)
+        XCTAssertEqual(error.code, .invalidEmail)
+        XCTAssertEqual(error.message, "malformed email string: a")
 
         let c4 = UserToCreate(email: "a@")
-        XCTAssertThrowsError(try c4.validatedRequest())
+        error = try XCTUnwrap(c4.validatedRequest().failure)
+        XCTAssertEqual(error.code, .invalidEmail)
+        XCTAssertEqual(error.message, "malformed email string: a@")
 
         let c5 = UserToCreate(email: "@a.")
-        XCTAssertThrowsError(try c5.validatedRequest())
+        error = try XCTUnwrap(c5.validatedRequest().failure)
+        XCTAssertEqual(error.code, .invalidEmail)
+        XCTAssertEqual(error.message, "malformed email string: @a.")
 
         let c6 = UserToCreate(email: "a@a@a")
-        XCTAssertThrowsError(try c6.validatedRequest())
+        error = try XCTUnwrap(c6.validatedRequest().failure)
+        XCTAssertEqual(error.code, .invalidEmail)
+        XCTAssertEqual(error.message, "malformed email string: a@a@a")
     }
 }

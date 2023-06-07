@@ -1,0 +1,185 @@
+public protocol FirebaseAuthAPIError: CodeAndMessageError {}
+
+public struct FirebaseAuthError: CodeAndMessageError {
+    public enum Code: String, Sendable {
+        /*
+         AUTH_SERVER_TO_CLIENT_CODE
+         https://github.com/firebase/firebase-admin-node/blob/master/src/utils/error.ts#L890
+         */
+        case billingNotEnabled
+        case claimsTooLarge
+        case configurationExists
+        case configurationNotFound
+        case insufficientPermission
+        case invalidConfig
+        case invalidConfigID
+        case invalidContinueURI
+        case invalidDynamicLinkDomain
+        case duplicateEmail
+        case duplicateLocalID
+        case duplicateMfaEnrollmentID
+        case emailExists
+        case emailNotFound
+        case forbiddenClaim
+        case invalidClaims
+        case invalidDuration
+        case invalidEmail
+        case invalidNewEmail
+        case invalidDisplayName
+        case invalidIDToken
+        case invalidOAuthClientID
+        case invalidPageSelection
+        case invalidPhoneNumber
+        case invalidProjectID
+        case invalidServiceAccount
+        case invalidTestingPhoneNumber
+        case invalidTenantType
+        case missingAndroidPackageName
+        case missingConfig
+        case missingConfigID
+        case missingDisplayName
+        case missingEmail
+        case missingIOSBundleID
+        case missingIssuer
+        case missingLocalID
+        case missingOAuthClientID
+        case missingProviderID
+        case missingSamlRelyingPartyConfig
+        case missingUserAccount
+        case operationNotAllowed
+        case permissionDenied
+        case phoneNumberExists
+        case projectNotFound
+        case quotaExceeded
+        case secondFactorLimitExceeded
+        case tenantNotFound
+        case tenantIDMismatch
+        case tokenExpired
+        case unauthorizedDomain
+        case unsupportedFirstFactor
+        case unsupportedSecondFactor
+        case unsupportedTenantOperation
+        case unverifiedEmail
+        case userNotFound
+        case userDisabled
+        case weakPassword
+        case invalidRecaptchaAction
+        case invalidRecaptchaEnforcementState
+        case recaptchaNotEnabled
+
+        /*
+         AuthClientErrorCode
+         https://github.com/firebase/firebase-admin-node/blob/master/src/utils/error.ts#L361
+         */
+        case invalidUID
+        case invalidPhotoURL
+    }
+
+    public var code: Code
+    public var message: String?
+
+    public init(
+        code: Code,
+        message: String?
+    ) {
+        self.code = code
+        self.message = message
+    }
+
+    public init(_ other: some FirebaseAuthAPIError) {
+        let code = other.code
+        let other = other as any CodeAndMessageError
+        do {
+            try self.init(other)
+        } catch {
+            fatalError("invalid code: \(code)")
+        }
+    }
+
+    public static func decodeErrorResponseMessage(message string: String) -> FirebaseAuthError? {
+        var codeString = string[...]
+        var messageString: Substring? = nil
+        if let index = codeString.firstIndex(of: ":") {
+            let messageIndex = string.index(after: index)
+            codeString = string[..<index]
+            messageString = string[messageIndex...]
+        }
+
+        guard let code = Self.stringToCodeMap[
+            codeString.trimmingCharacters(in: .whitespaces)
+        ] else { return nil }
+
+        return FirebaseAuthError(
+            code: code,
+            message: messageString?.trimmingCharacters(in: .whitespaces)
+        )
+    }
+
+    static let codeToStringMap: [Code: String] = [
+        .billingNotEnabled: "BILLING_NOT_ENABLED",
+        .claimsTooLarge: "CLAIMS_TOO_LARGE",
+        .configurationExists: "CONFIGURATION_EXISTS",
+        .configurationNotFound: "CONFIGURATION_NOT_FOUND",
+        .insufficientPermission: "INSUFFICIENT_PERMISSION",
+        .invalidConfig: "INVALID_CONFIG",
+        .invalidConfigID: "INVALID_CONFIG_ID",
+        .invalidContinueURI: "INVALID_CONTINUE_URI",
+        .invalidDynamicLinkDomain: "INVALID_DYNAMIC_LINK_DOMAIN",
+        .duplicateEmail: "DUPLICATE_EMAIL",
+        .duplicateLocalID: "DUPLICATE_LOCAL_ID",
+        .duplicateMfaEnrollmentID: "DUPLICATE_MFA_ENROLLMENT_ID",
+        .emailExists: "EMAIL_EXISTS",
+        .emailNotFound: "EMAIL_NOT_FOUND",
+        .forbiddenClaim: "FORBIDDEN_CLAIM",
+        .invalidClaims: "INVALID_CLAIMS",
+        .invalidDuration: "INVALID_DURATION",
+        .invalidEmail: "INVALID_EMAIL",
+        .invalidNewEmail: "INVALID_NEW_EMAIL",
+        .invalidDisplayName: "INVALID_DISPLAY_NAME",
+        .invalidIDToken: "INVALID_ID_TOKEN",
+        .invalidOAuthClientID: "INVALID_OAUTH_CLIENT_ID",
+        .invalidPageSelection: "INVALID_PAGE_SELECTION",
+        .invalidPhoneNumber: "INVALID_PHONE_NUMBER",
+        .invalidProjectID: "INVALID_PROJECT_ID",
+        .invalidServiceAccount: "INVALID_SERVICE_ACCOUNT",
+        .invalidTestingPhoneNumber: "INVALID_TESTING_PHONE_NUMBER",
+        .invalidTenantType: "INVALID_TENANT_TYPE",
+        .missingAndroidPackageName: "MISSING_ANDROID_PACKAGE_NAME",
+        .missingConfig: "MISSING_CONFIG",
+        .missingConfigID: "MISSING_CONFIG_ID",
+        .missingDisplayName: "MISSING_DISPLAY_NAME",
+        .missingEmail: "MISSING_EMAIL",
+        .missingIOSBundleID: "MISSING_IOS_BUNDLE_ID",
+        .missingIssuer: "MISSING_ISSUER",
+        .missingLocalID: "MISSING_LOCAL_ID",
+        .missingOAuthClientID: "MISSING_OAUTH_CLIENT_ID",
+        .missingProviderID: "MISSING_PROVIDER_ID",
+        .missingSamlRelyingPartyConfig: "MISSING_SAML_RELYING_PARTY_CONFIG",
+        .missingUserAccount: "MISSING_USER_ACCOUNT",
+        .operationNotAllowed: "OPERATION_NOT_ALLOWED",
+        .permissionDenied: "PERMISSION_DENIED",
+        .phoneNumberExists: "PHONE_NUMBER_EXISTS",
+        .projectNotFound: "PROJECT_NOT_FOUND",
+        .quotaExceeded: "QUOTA_EXCEEDED",
+        .secondFactorLimitExceeded: "SECOND_FACTOR_LIMIT_EXCEEDED",
+        .tenantNotFound: "TENANT_NOT_FOUND",
+        .tenantIDMismatch: "TENANT_ID_MISMATCH",
+        .tokenExpired: "TOKEN_EXPIRED",
+        .unauthorizedDomain: "UNAUTHORIZED_DOMAIN",
+        .unsupportedFirstFactor: "UNSUPPORTED_FIRST_FACTOR",
+        .unsupportedSecondFactor: "UNSUPPORTED_SECOND_FACTOR",
+        .unsupportedTenantOperation: "UNSUPPORTED_TENANT_OPERATION",
+        .unverifiedEmail: "UNVERIFIED_EMAIL",
+        .userNotFound: "USER_NOT_FOUND",
+        .userDisabled: "USER_DISABLED",
+        .weakPassword: "WEAK_PASSWORD",
+        .invalidRecaptchaAction: "INVALID_RECAPTCHA_ACTION",
+        .invalidRecaptchaEnforcementState: "INVALID_RECAPTCHA_ENFORCEMENT_STATE",
+        .recaptchaNotEnabled: "RECAPTCHA_NOT_ENABLED",
+    ]
+
+    static let stringToCodeMap: [String: Code] = Dictionary(
+        uniqueKeysWithValues: codeToStringMap.map { ($0.value, $0.key) }
+    )
+}
+
