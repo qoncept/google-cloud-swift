@@ -199,7 +199,7 @@ final class AuthTest: XCTestCase {
         create modifyCreate: ((inout UserToCreate) -> Void)? = nil,
         properties: UpdateUserProperties,
         line: UInt = #line
-    ) async throws -> UserRecord {
+    ) async throws -> Result<UserRecord, UpdateUserError> {
         var create = UserToCreate(
             displayName: "cat",
             email: "updateUser_\(line)@example.com",
@@ -209,36 +209,42 @@ final class AuthTest: XCTestCase {
 
         let auth = try makeAuth()
         let uid0 = try await auth.createUser(create).get()
-        try await auth.updateUser(properties, for: uid0).get()
+        switch try await auth.updateUser(properties, for: uid0) {
+        case .failure(let error): return .failure(error)
+        case .success: break
+        }
         let usero = try await auth.user(for: uid0)
-        return try XCTUnwrap(usero)
+        return .success(try XCTUnwrap(usero))
     }
 
     func testUpdateUserDisplayName() async throws {
         let u = try await runUpdateUser(
             properties: .init(displayName: .set("dog"))
-        )
+        ).get()
         XCTAssertEqual(u.displayName, "dog")
     }
 
     func testUpdateUserDeleteDisplayName() async throws {
         let u = try await runUpdateUser(
             properties: .init(displayName: .delete)
-        )
+        ).get()
         XCTAssertEqual(u.displayName, nil)
     }
 
-    func testUpdateUserEmptyDisplayName() async throws {
-        let u = try await runUpdateUser(
-            properties: .init(displayName: .set(""))
-        )
-        XCTAssertEqual(u.displayName, "")
+    func testUpdateUserErrorEmptyDisplayName() async throws {
+        let error = try await XCTUnwrap {
+            try await runUpdateUser(
+                properties: .init(displayName: .set(""))
+            ).failure
+        }
+        XCTAssertEqual(error.code, .invalidDisplayName)
+        XCTAssertEqual(error.message, "display name must be a non-empty string")
     }
 
     func testUpdateUserEmail() async throws {
         let u = try await runUpdateUser(
             properties: .init(email: "testUpdateUserEmail.updated@example.com")
-        )
+        ).get()
         XCTAssertEqual(u.email, "testUpdateUserEmail.updated@example.com".lowercased())
     }
 
@@ -246,14 +252,14 @@ final class AuthTest: XCTestCase {
         let u = try await runUpdateUser(
             create: { $0.phoneNumber = "+81-090-1234-1234" },
             properties: .init(phoneNumber: .delete)
-        )
+        ).get()
         XCTAssertEqual(u.phoneNumber, nil)
     }
 
     func testUpdateUserPassword() async throws {
         let u = try await runUpdateUser(
             properties: .init(password: "987654")
-        )
+        ).get()
         // TODO: attempt to login
         _ = u
     }
@@ -261,7 +267,7 @@ final class AuthTest: XCTestCase {
     func testUpdateUserPhotoURL() async throws {
         let u = try await runUpdateUser(
             properties: .init(photoURL: .set("https://example.com/cat.jpeg"))
-        )
+        ).get()
         XCTAssertEqual(u.photoURL, "https://example.com/cat.jpeg")
     }
 
@@ -277,6 +283,7 @@ final class AuthTest: XCTestCase {
             ).failure
         }
         XCTAssertEqual(error.code, .invalidEmail)
+        XCTAssertEqual(error.message, "malformed email string: a")
     }
 
     func testUpdateUserErrorEmailExists() async throws {
@@ -309,8 +316,24 @@ final class AuthTest: XCTestCase {
             ).failure
         }
         XCTAssertEqual(error.code, .invalidPhoneNumber)
+        XCTAssertEqual(error.message, "phone number must be a valid, E.164 compliant identifier")
     }
-    
+
+    func testUpdateUserErrorEmptyPhotoURL() async throws {
+        let auth = try makeAuth()
+        let id = try await auth.createUser(.init(
+            email: "testUpdateUserErrorInvalidPhotoURL@example.com",
+            password: "123456"
+        )).get()
+        let error = try await XCTUnwrap {
+            try await auth.updateUser(
+                .init(photoURL: .set("")), for: id
+            ).failure
+        }
+        XCTAssertEqual(error.code, .invalidPhotoURL)
+        XCTAssertEqual(error.message, "photoURL must be a non-empty string")
+    }
+
     func testUpdateUserErrorWeakPassword() async throws {
         let auth = try makeAuth()
 
@@ -321,7 +344,7 @@ final class AuthTest: XCTestCase {
         let result = try await auth.updateUser(.init(password: "123"), for: id)
         let error: UpdateUserError = try XCTUnwrap(result.failure)
         XCTAssertEqual(error.code, .weakPassword)
-        XCTAssertEqual(error.message, "Password should be at least 6 characters")
+        XCTAssertEqual(error.message, "password must be a string at least 6 characters long")
     }
 
     func testSetCustomClaims() async throws {

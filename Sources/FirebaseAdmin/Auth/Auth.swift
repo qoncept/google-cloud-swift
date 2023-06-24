@@ -172,6 +172,11 @@ public struct Auth {
     }
 
     public func updateUser(_ properties: UpdateUserProperties, for uid: String) async throws -> Result<Void, UpdateUserError> {
+        switch properties.validate() {
+        case .failure(let error): return .failure(error)
+        case .success: break
+        }
+
         let path = "/accounts:update"
 
         let ret = try await baseClient.post(

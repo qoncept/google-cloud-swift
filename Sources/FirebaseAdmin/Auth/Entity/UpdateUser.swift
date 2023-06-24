@@ -2,12 +2,11 @@ import Foundation
 
 public struct UpdateUserError: CodeAndMessageError {
     public enum Code: String, Sendable {
-//        case invalidUID
-//        case invalidDisplayName
+        case invalidDisplayName
         case invalidEmail
         case emailExists
         case invalidPhoneNumber
-//        case invalidPhotoURL
+        case invalidPhotoURL
         case weakPassword
     }
 
@@ -21,6 +20,16 @@ public struct UpdateUserError: CodeAndMessageError {
 
     public var code: Code
     public var message: String?
+
+    init(_ error: UserValidationError) {
+        switch error.code {
+        case .invalidDisplayName: self = .init(code: .invalidDisplayName, message: error.message)
+        case .invalidEmail: self = .init(code: .invalidEmail, message: error.message)
+        case .invalidPhoneNumber: self = .init(code: .invalidPhoneNumber, message: error.message)
+        case .invalidPhotoURL: self = .init(code: .invalidPhotoURL, message: error.message)
+        case .weakPassword: self = .init(code: .weakPassword, message: error.message)
+        }
+    }
 }
 
 // interface UpdateRequest
@@ -128,6 +137,45 @@ public struct UpdateUserProperties {
             deleteAttribute: deleteAttribute.isEmpty ? nil : deleteAttribute,
             deleteProvider: deleteProvider.isEmpty ? nil : deleteProvider
         )
+    }
+
+    func validate() -> Result<Void, UpdateUserError> {
+        if case .set(let displayName) = displayName {
+            switch UserValidations.validateDisplayName(displayName) {
+            case .failure(let error): return .failure(.init(error))
+            case .success: break
+            }
+        }
+
+        if let email = email {
+            switch UserValidations.validateEmail(email) {
+            case .failure(let error): return .failure(.init(error))
+            case .success: break
+            }
+        }
+
+        if case .set(let phoneNumber) = phoneNumber {
+            switch UserValidations.validatePhone(phoneNumber) {
+            case .failure(let error): return .failure(.init(error))
+            case .success: break
+            }
+        }
+
+        if case .set(let photoUrl) = photoURL {
+            switch UserValidations.validatePhotoURL(photoURL: photoUrl) {
+            case .failure(let error): return .failure(.init(error))
+            case .success: break
+            }
+        }
+
+        if let password = password {
+            switch UserValidations.validatePassword(password: password) {
+            case .failure(let error): return .failure(.init(error))
+            case .success: break
+            }
+        }
+
+        return .success(())
     }
 }
 
