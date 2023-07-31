@@ -215,11 +215,6 @@ public struct Auth {
     }
 
     public func listUsers(pageSize: Int?, pageToken: String?) async throws -> Result<ListUserResult, FirebaseAuthError> {
-        struct Request: Encodable {
-            var maxResults: Int
-            var nextPageToken: String?
-        }
-
         var queryItems: [URLQueryItem] = [
             .init(name: "maxResults", value: (pageSize ?? 1000).description)
         ]
