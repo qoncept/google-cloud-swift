@@ -1,3 +1,4 @@
+import NIOHTTP1
 import AsyncHTTPClient
 import Foundation
 import GoogleCloudBase
@@ -18,6 +19,24 @@ extension Auth {
             self.tenantID = tenantID
         }
 
+        func get<Response: Decodable>(
+            path: String,
+            queryItems: [URLQueryItem],
+            responseType: Response.Type
+        ) async throws -> Result<Response, FirebaseAuthError> {
+            do {
+                let response = try await authorizedClient.get(
+                    path: makeUserMtgPath(path: path),
+                    headers: makeHeaders(),
+                    queryItems: queryItems,
+                    responseType: responseType
+                )
+                return .success(response)
+            } catch {
+                return try handleClientError(error)
+            }
+        }
+
         func post<Body: Encodable, Response: Decodable>(
             path: String,
             payload: Body,
@@ -26,23 +45,13 @@ extension Auth {
             do {
                 let response = try await authorizedClient.post(
                     path: makeUserMtgPath(path: path),
-                    headers: [
-                        "X-Goog-User-Project": projectID,
-                    ],
+                    headers: makeHeaders(),
                     payload: payload,
                     responseType: responseType
                 )
                 return .success(response)
             } catch {
-                if let error = error as? GoogleCloudBase.ErrorResponse {
-                    if let error = FirebaseAuthError.decodeErrorResponseMessage(
-                        message: error.error.message
-                    ) {
-                        return .failure(error)
-                    }
-                }
-
-                throw error
+                return try handleClientError(error)
             }
         }
 
@@ -61,6 +70,24 @@ extension Auth {
                     .appendingPathComponent(path)
                     .path
             }
+        }
+
+        private func makeHeaders() -> HTTPHeaders {
+            [
+                "X-Goog-User-Project": projectID,
+            ]
+        }
+
+        private func handleClientError<T>(_ error: Error) throws -> Result<T, FirebaseAuthError> {
+            if let error = error as? GoogleCloudBase.ErrorResponse {
+                if let error = FirebaseAuthError.decodeErrorResponseMessage(
+                    message: error.error.message
+                ) {
+                    return .failure(error)
+                }
+            }
+
+            throw error
         }
     }
 }

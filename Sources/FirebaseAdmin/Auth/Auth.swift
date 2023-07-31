@@ -172,6 +172,11 @@ public struct Auth {
     }
 
     public func updateUser(_ properties: UpdateUserProperties, for uid: String) async throws -> Result<Void, UpdateUserError> {
+        switch properties.validate() {
+        case .failure(let error): return .failure(error)
+        case .success: break
+        }
+
         let path = "/accounts:update"
 
         let ret = try await baseClient.post(
@@ -207,5 +212,24 @@ public struct Auth {
 
         let path = "/accounts:delete"
         _ = try await baseClient.post(path: path, payload: payload, responseType: Response.self)
+    }
+
+    public func listUsers(pageSize: Int?, pageToken: String?) async throws -> Result<ListUserResult, FirebaseAuthError> {
+        struct Request: Encodable {
+            var maxResults: Int
+            var nextPageToken: String?
+        }
+
+        var queryItems: [URLQueryItem] = [
+            .init(name: "maxResults", value: (pageSize ?? 1000).description)
+        ]
+        if let pageToken {
+            queryItems.append(.init(name: "nextPageToken", value: pageToken))
+        }
+        return try await baseClient.get(
+            path: "/accounts:batchGet",
+            queryItems: queryItems,
+            responseType: ListUserResult.self
+        )
     }
 }

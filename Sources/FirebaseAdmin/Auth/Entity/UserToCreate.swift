@@ -18,10 +18,16 @@ public struct CreateUserError: FirebaseAuthAPIError {
 
     public var code: Code
     public var message: String?
-}
 
-struct UserToCreateError: Error {
-    var message: String
+    init(_ error: UserValidationError) {
+        switch error.code {
+        case .invalidDisplayName: self = .init(code: .invalidDisplayName, message: error.message)
+        case .invalidEmail: self = .init(code: .invalidEmail, message: error.message)
+        case .invalidPhoneNumber: self = .init(code: .invalidPhoneNumber, message: error.message)
+        case .invalidPhotoURL: self = .init(code: .invalidPhotoURL, message: error.message)
+        case .weakPassword: self = .init(code: .weakPassword, message: error.message)
+        }
+    }
 }
 
 public struct UserToCreate: Encodable {
@@ -43,127 +49,45 @@ public struct UserToCreate: Encodable {
 
     func validatedRequest() -> Result<Void, CreateUserError> {
         if let localId = localId {
-            switch Self.validateUID(uid: localId) {
-            case .failure(let e): return .failure(e)
+            switch UserValidations.validateUID(localId) {
+            case .failure(let error): return .failure(error)
             case .success: break
             }
         }
 
         if let displayName = displayName {
-            switch Self.validateDisplayName(displayName: displayName) {
-            case .failure(let e): return .failure(e)
+            switch UserValidations.validateDisplayName(displayName) {
+            case .failure(let error): return .failure(.init(error))
             case .success: break
             }
         }
 
         if let email = email {
-            switch Self.validateEmail(email: email) {
-            case .failure(let e): return .failure(e)
+            switch UserValidations.validateEmail(email) {
+            case .failure(let error): return .failure(.init(error))
             case .success: break
             }
         }
 
         if let phoneNumber = phoneNumber {
-            switch Self.validatePhone(phone: phoneNumber) {
-            case .failure(let e): return .failure(e)
+            switch UserValidations.validatePhone(phoneNumber) {
+            case .failure(let error): return .failure(.init(error))
             case .success: break
             }
         }
 
         if let photoUrl = photoUrl {
-            switch Self.validatePhotoURL(photoURL: photoUrl) {
-            case .failure(let e): return .failure(e)
+            switch UserValidations.validatePhotoURL(photoURL: photoUrl) {
+            case .failure(let error): return .failure(.init(error))
             case .success: break
             }
         }
 
         if let password = password {
-            switch Self.validatePassword(password: password) {
-            case .failure(let e): return .failure(e)
+            switch UserValidations.validatePassword(password: password) {
+            case .failure(let error): return .failure(.init(error))
             case .success: break
             }
-        }
-
-        return .success(())
-    }
-
-    // MARK: - static
-
-    static func validateUID(uid: String) -> Result<Void, CreateUserError> {
-        if uid.isEmpty {
-            return .failure(
-                .init(code: .invalidUID, message: "uid must be a non-empty string")
-            )
-        }
-
-        if uid.utf8.count > 128 {
-            return .failure(
-                .init(code: .invalidUID, message: "uid string must not be longer than 128 characters")
-            )
-        }
-
-        return .success(())
-    }
-
-    static func validateDisplayName(displayName: String) -> Result<Void, CreateUserError> {
-        if displayName.isEmpty {
-            return .failure(
-                .init(code: .invalidDisplayName, message: "display name must be a non-empty string")
-            )
-        }
-
-        return .success(())
-    }
-
-    static func validateEmail(email: String) -> Result<Void, CreateUserError> {
-        if email.isEmpty {
-            return .failure(
-                .init(code: .invalidEmail, message: "email must be a non-empty string")
-            )
-        }
-
-        let parts = email.split(separator: "@")
-        guard parts.count == 2, parts[1].contains(".") else {
-            return .failure(
-                .init(code: .invalidEmail, message: "malformed email string: \(email)")
-            )
-        }
-
-        return .success(())
-    }
-
-    static let e164Regex = try! NSRegularExpression(pattern: #"\+.*[0-9A-Za-z]"#)
-    static func validatePhone(phone: String) -> Result<Void, CreateUserError> {
-        if phone.isEmpty {
-            return .failure(
-                .init(code: .invalidPhoneNumber, message: "phone number must be a non-empty string")
-            )
-        }
-
-        if e164Regex.numberOfMatches(in: phone, options: [], range: NSRange(location: 0, length: phone.count)) == 0 {
-            return .failure(
-                .init(code: .invalidPhoneNumber, message: "phone number must be a valid, E.164 compliant identifier")
-            )
-        }
-
-        return .success(())
-    }
-
-    static func validatePhotoURL(photoURL: String) -> Result<Void, CreateUserError> {
-        if photoURL.isEmpty {
-            return .failure(
-                .init(code: .invalidPhotoURL, message: "photoURL must be a non-empty string")
-            )
-        }
-
-        return .success(())
-    }
-
-    static func validatePassword(password: String) -> Result<Void, CreateUserError> {
-        if password.utf8.count < 6 {
-            return .failure(
-                .init(code: .weakPassword, message: "password must be a string at least 6 characters long")
-            )
         }
 
         return .success(())
