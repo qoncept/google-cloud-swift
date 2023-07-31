@@ -62,10 +62,16 @@ final class ListUserTest: XCTestCase {
         }
 
         var founds: [Int: UserRecord] = [:]
-
+        var callCount = 0
         var pageToken: String? = nil
         while true {
-            let result = try await auth.listUsers(pageSize: 10, pageToken: pageToken).get()
+            callCount += 1
+            let result = try await auth.listUsers(pageSize: 20, pageToken: pageToken).get()
+            if callCount == 5 {
+                XCTAssertEqual(result.users.count, 10)
+            } else {
+                XCTAssertEqual(result.users.count, 20)
+            }
             for user in result.users {
                 let index = Int(user.displayName!)!
                 XCTAssertEqual(user.email, "\(index)@firebase.com")
@@ -77,8 +83,9 @@ final class ListUserTest: XCTestCase {
             pageToken = nextPageToken
         }
 
-        let foundIDs = Set(founds.keys)
+        XCTAssertEqual(callCount, 5)
 
+        let foundIDs = Set(founds.keys)
         XCTAssertEqual(foundIDs, Set(0..<90))
     }
 }
