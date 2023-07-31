@@ -62,9 +62,10 @@ final class ListUserTest: XCTestCase {
         }
 
         var founds: [Int: UserRecord] = [:]
-
+        var callCount = 0
         var pageToken: String? = nil
         while true {
+            callCount += 1
             let result = try await auth.listUsers(pageSize: 10, pageToken: pageToken).get()
             for user in result.users {
                 let index = Int(user.displayName!)!
@@ -77,8 +78,9 @@ final class ListUserTest: XCTestCase {
             pageToken = nextPageToken
         }
 
-        let foundIDs = Set(founds.keys)
+        XCTAssertEqual(callCount, 10)
 
+        let foundIDs = Set(founds.keys)
         XCTAssertEqual(foundIDs, Set(0..<90))
     }
 }
