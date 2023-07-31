@@ -213,4 +213,18 @@ public struct Auth {
         let path = "/accounts:delete"
         _ = try await baseClient.post(path: path, payload: payload, responseType: Response.self)
     }
+
+    public func listUsers(pageSize: Int?, pageToken: String?) async throws -> Result<ListUserResult, FirebaseAuthError> {
+        var queryItems: [URLQueryItem] = [
+            .init(name: "maxResults", value: (pageSize ?? 1000).description)
+        ]
+        if let pageToken {
+            queryItems.append(.init(name: "nextPageToken", value: pageToken))
+        }
+        return try await baseClient.get(
+            path: "/accounts:batchGet",
+            queryItems: queryItems,
+            responseType: ListUserResult.self
+        )
+    }
 }
