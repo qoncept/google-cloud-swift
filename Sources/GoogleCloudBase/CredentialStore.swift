@@ -8,17 +8,17 @@ struct OAuth2Token {
 }
 
 public actor CredentialStore {
-    let credential: Credential
-    nonisolated public var compilersafeCredential: Credential {
+    public let credential: any Credential
+    nonisolated public var compilersafeCredential: any Credential {
         // 外のモジュールが「actorに生えたSendableなlet変数」をawaitするとコンパイラがクラッシュするので、その回避
         credential
     }
-    private let clock: Clock
+    private let clock: any Clock
     private var cachedToken: OAuth2Token?
 
-    private var refreshingTask: Task<OAuth2Token, Error>?
+    private var refreshingTask: Task<OAuth2Token, any Error>?
 
-    public init(credential: Credential, clock: Clock = .default) {
+    public init(credential: any Credential, clock: any Clock = .default) {
         self.credential = credential
         self.clock = clock
     }
@@ -42,11 +42,11 @@ public actor CredentialStore {
     }
 
     private func refreshToken() async throws -> OAuth2Token {
-        if let refreshingTask = refreshingTask {
+        if let refreshingTask {
             return try await refreshingTask.value
         }
 
-        let task = Task<OAuth2Token, Error> {
+        let task = Task<OAuth2Token, any Error> {
             let rawTokenResponse = try await credential.getAccessToken()
             let newToken = OAuth2Token(
                 accessToken: rawTokenResponse.accessToken,

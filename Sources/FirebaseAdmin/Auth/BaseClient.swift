@@ -57,7 +57,7 @@ extension Auth {
 
         private func makeUserMtgPath(path: String) -> String {
             let tmpURL = URL(fileURLWithPath: "/")
-            if let tenantID = tenantID {
+            if let tenantID {
                 return tmpURL.appendingPathComponent("projects")
                     .appendingPathComponent(projectID)
                     .appendingPathComponent("tenants")
@@ -78,7 +78,7 @@ extension Auth {
             ]
         }
 
-        private func handleClientError<T>(_ error: Error) throws -> Result<T, FirebaseAuthError> {
+        private func handleClientError<T>(_ error: any Error) throws -> Result<T, FirebaseAuthError> {
             if let error = error as? GoogleCloudBase.ErrorResponse {
                 if let error = FirebaseAuthError.decodeErrorResponseMessage(
                     message: error.error.message

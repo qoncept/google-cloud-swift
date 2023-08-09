@@ -110,7 +110,7 @@ struct URLSigner {
         let credentialScope = "\(datestamp)/auto/storage/goog4_request"
 
         let credential = authorizedClient.credentialStore.compilersafeCredential
-        guard let credential = credential as? RichCredential else {
+        guard let credential = credential as? (any RichCredential) else {
             throw URLSignerError(message: "\(type(of: credential)) does not support signing.")
         }
         let dateISO = isoFormatter.string(from: accessibleAt)
@@ -167,18 +167,19 @@ struct URLSigner {
     }
 }
 
-private let whitespaceRegex = try! NSRegularExpression(pattern: #"\s{2,}"#, options: [])
-
 private func canonicalize(headers: HTTPHeaders) -> String {
     let sortedKeys = Set(headers.map { $0.name.lowercased() })
         .sorted()
     return sortedKeys
         .map { key in
             let values = headers[canonicalForm: key]
-            let canonicalValue = values.map({ value in
-                let v = String(value)
-                return whitespaceRegex.stringByReplacingMatches(in: v, options: [], range: NSRange(0..<v.count), withTemplate: " ")
-            }).joined(separator: ",")
+            let canonicalValue = values
+                .map { value in
+                    value.replacing(/\s{2,}/) { (_) in
+                        " "
+                    }
+                }
+                .joined(separator: ",")
             return "\(key):\(canonicalValue)\n"
         }
         .joined()

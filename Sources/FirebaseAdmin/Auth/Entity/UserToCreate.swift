@@ -1,7 +1,7 @@
 import Foundation
 
 public struct CreateUserError: FirebaseAuthAPIError {
-    public enum Code: String {
+    public enum Code: String, Sendable {
         case invalidUID
         case invalidDisplayName
         case invalidEmail
@@ -48,42 +48,42 @@ public struct UserToCreate: Encodable {
     public var password: String?
 
     func validatedRequest() -> Result<Void, CreateUserError> {
-        if let localId = localId {
+        if let localId {
             switch UserValidations.validateUID(localId) {
             case .failure(let error): return .failure(error)
             case .success: break
             }
         }
 
-        if let displayName = displayName {
+        if let displayName {
             switch UserValidations.validateDisplayName(displayName) {
             case .failure(let error): return .failure(.init(error))
             case .success: break
             }
         }
 
-        if let email = email {
+        if let email {
             switch UserValidations.validateEmail(email) {
             case .failure(let error): return .failure(.init(error))
             case .success: break
             }
         }
 
-        if let phoneNumber = phoneNumber {
+        if let phoneNumber {
             switch UserValidations.validatePhone(phoneNumber) {
             case .failure(let error): return .failure(.init(error))
             case .success: break
             }
         }
 
-        if let photoUrl = photoUrl {
+        if let photoUrl {
             switch UserValidations.validatePhotoURL(photoURL: photoUrl) {
             case .failure(let error): return .failure(.init(error))
             case .success: break
             }
         }
 
-        if let password = password {
+        if let password {
             switch UserValidations.validatePassword(password: password) {
             case .failure(let error): return .failure(.init(error))
             case .success: break

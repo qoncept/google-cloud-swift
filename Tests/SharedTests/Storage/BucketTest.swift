@@ -3,7 +3,7 @@ import NIOPosix
 import XCTest
 
 final class BucketTest: XCTestCase {
-    private static let client = AsyncHTTPClient.HTTPClient(eventLoopGroupProvider: .createNew)
+    private static let client = AsyncHTTPClient.HTTPClient(eventLoopGroupProvider: .singleton)
 
     override class func setUp() {
         super.setUp()

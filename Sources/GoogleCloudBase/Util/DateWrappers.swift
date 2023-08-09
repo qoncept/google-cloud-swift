@@ -5,7 +5,7 @@ struct RFC3339ZDateBase: Codable {
     init(value: Date) {
         self.value = value
     }
-    init(from decoder: Decoder) throws {
+    init(from decoder: any Decoder) throws {
         let c = try decoder.singleValueContainer()
         let dateString = try c.decode(String.self)
         let formatters: [ISO8601DateFormatter] = [
@@ -25,7 +25,7 @@ struct RFC3339ZDateBase: Codable {
         throw DecodingError.dataCorruptedError(in: c, debugDescription: "invalid date format")
     }
 
-    func encode(to encoder: Encoder) throws {
+    func encode(to encoder: any Encoder) throws {
         var c = encoder.singleValueContainer()
         let dateString = ISO8601DateFormatter().string(from: value)
         try c.encode(dateString)
@@ -42,12 +42,12 @@ struct RFC3339ZDateBase: Codable {
         set { innerValue.value = newValue }
     }
 
-    public init(from decoder: Decoder) throws {
+    public init(from decoder: any Decoder) throws {
         let c = try decoder.singleValueContainer()
         innerValue = try c.decode(RFC3339ZDateBase.self)
     }
 
-    public func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: any Encoder) throws {
         var c = encoder.singleValueContainer()
         try c.encode(innerValue)
     }
@@ -63,13 +63,13 @@ struct RFC3339ZDateBase: Codable {
         set { innerValue = newValue.map { .init(value: $0) } }
     }
 
-    public init(from decoder: Decoder) throws {
+    public init(from decoder: any Decoder) throws {
         let c = try decoder.singleValueContainer()
         innerValue = try c.decode(RFC3339ZDateBase.self)
     }
 
-    public func encode(to encoder: Encoder) throws {
-        if let innerValue = innerValue {
+    public func encode(to encoder: any Encoder) throws {
+        if let innerValue {
             var c = encoder.singleValueContainer()
             try c.encode(innerValue)
         }
@@ -87,7 +87,7 @@ extension KeyedDecodingContainer {
         self.wrappedValue = wrappedValue
     }
     public var wrappedValue: Date
-    public init(from decoder: Decoder) throws {
+    public init(from decoder: any Decoder) throws {
         let c = try decoder.singleValueContainer()
         let jsonString = try c.decode(String.self)
         guard let number = TimeInterval(jsonString) else {
@@ -102,7 +102,7 @@ extension KeyedDecodingContainer {
         self.wrappedValue = wrappedValue
     }
     public var wrappedValue: Date?
-    public init(from decoder: Decoder) throws {
+    public init(from decoder: any Decoder) throws {
         let c = try decoder.singleValueContainer()
         let jsonString = try c.decode(String.self)
         guard let number = TimeInterval(jsonString) else {

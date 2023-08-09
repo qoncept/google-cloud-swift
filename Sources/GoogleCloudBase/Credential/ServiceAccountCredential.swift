@@ -29,9 +29,9 @@ struct ServiceAccountCredential: RichCredential, Sendable {
     let clientEmail: String
 
     private let httpClient: AsyncHTTPClient.HTTPClient
-    private let clock: Clock
+    private let clock: any Clock
 
-    init(credentialsFileData: Data, httpClient: AsyncHTTPClient.HTTPClient, clock: Clock = .default) throws {
+    init(credentialsFileData: Data, httpClient: AsyncHTTPClient.HTTPClient, clock: any Clock = .default) throws {
         let serviceAccount = try JSONDecoder().decode(ServiceAccount.self, from: credentialsFileData)
         projectID = serviceAccount.projectID
         privateKey = serviceAccount.privateKey
