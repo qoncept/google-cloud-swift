@@ -173,12 +173,13 @@ private func canonicalize(headers: HTTPHeaders) -> String {
     return sortedKeys
         .map { key in
             let values = headers[canonicalForm: key]
-            let canonicalValue = values.map({ value in
-                let v = String(value)
-                return v.replacing(/\s{2,}/) { (_) in
-                    " "
+            let canonicalValue = values
+                .map { value in
+                    value.replacing(/\s{2,}/) { (_) in
+                        " "
+                    }
                 }
-            }).joined(separator: ",")
+                .joined(separator: ",")
             return "\(key):\(canonicalValue)\n"
         }
         .joined()
