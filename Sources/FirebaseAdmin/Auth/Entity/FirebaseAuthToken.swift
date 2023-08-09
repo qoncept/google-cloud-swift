@@ -53,7 +53,7 @@ public struct FirebaseAuthToken: JWTPayload, Sendable {
         }
     }
 
-    public init(from decoder: Decoder) throws {
+    public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         authTime = try container.decode(AuthTimeClaim.self, forKey: .authTime)
         issuer = try container.decode(IssuerClaim.self, forKey: .issuer)

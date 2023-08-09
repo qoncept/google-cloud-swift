@@ -6,7 +6,7 @@ func XCTUnwrap<T>(_ expression: @Sendable () async throws -> T?, _ message: @aut
     return try XCTUnwrap(v.get(), message(), file: file, line: line)
 }
 
-extension Result where Failure == Error {
+extension Result where Failure == any Error {
     init(catching body: () async throws -> Success) async {
         do {
             self = .success(try await body())
@@ -38,7 +38,7 @@ extension Result {
     }
 }
 
-func XCTAssertThrowsError<T>(_ expression: @Sendable () async throws -> T, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line, _ errorHandler: (_ error: Error) -> Void = { _ in }) async {
+func XCTAssertThrowsError<T>(_ expression: @Sendable () async throws -> T, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line, _ errorHandler: (_ error: any Error) -> Void = { _ in }) async {
     let v = await Result { try await expression() }
     XCTAssertThrowsError(try v.get(), message(), file: file, line: line, errorHandler)
 }

@@ -46,7 +46,7 @@ extension Credential where Self == Never {
         return gcloudCredential
     }
 
-    public static func makeApplicationDefault(httpClient: AsyncHTTPClient.HTTPClient) throws -> Credential {
+    public static func makeApplicationDefault(httpClient: AsyncHTTPClient.HTTPClient) throws -> any Credential {
         if let googleApplicationCredential = ProcessInfo.processInfo.environment["GOOGLE_APPLICATION_CREDENTIALS"] {
             return try makeCredential(fromFile: URL(fileURLWithPath: googleApplicationCredential), httpClient: httpClient)
         }
@@ -59,19 +59,19 @@ extension Credential where Self == Never {
         return try ComputeEngineCredential(httpClient: httpClient)
     }
 
-    public static func makeCredential(fromFile fileURL: URL, httpClient: AsyncHTTPClient.HTTPClient) throws -> Credential {
+    public static func makeCredential(fromFile fileURL: URL, httpClient: AsyncHTTPClient.HTTPClient) throws -> any Credential {
         let data = try Data(contentsOf: fileURL)
         return try makeCredential(data: data, httpClient: httpClient)
     }
 
-    public static func makeCredential(fromBase64EncodedString string: String, httpClient: AsyncHTTPClient.HTTPClient) throws -> Credential {
+    public static func makeCredential(fromBase64EncodedString string: String, httpClient: AsyncHTTPClient.HTTPClient) throws -> any Credential {
         guard let data = Data(base64Encoded: string) else {
             throw CredentialError(message: "Failed to decode base64EncodedString")
         }
         return try makeCredential(data: data, httpClient: httpClient)
     }
 
-    public static func makeCredential(data: Data, httpClient: AsyncHTTPClient.HTTPClient) throws -> Credential {
+    public static func makeCredential(data: Data, httpClient: AsyncHTTPClient.HTTPClient) throws -> any Credential {
         let credentialsFile: CredentialsFile
         do {
             credentialsFile = try JSONDecoder().decode(CredentialsFile.self, from: data)
@@ -89,7 +89,7 @@ extension Credential where Self == Never {
         }
     }
 
-    public static func makeEmulatorCredential() -> Credential {
+    public static func makeEmulatorCredential() -> any Credential {
         return EmulatorCredential()
     }
 }

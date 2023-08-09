@@ -6,7 +6,7 @@ final class MockCredential: Credential, @unchecked Sendable {
 
     var getAccessTokenCalled: Int = 0
     var getAccessTokenDelay: TimeInterval = 0
-    var getAccessTokenResult: Result<GoogleOAuthAccessToken, Error> = .failure(UndefinedError())
+    var getAccessTokenResult: Result<GoogleOAuthAccessToken, any Error> = .failure(UndefinedError())
 
     func getAccessToken() async throws -> GoogleOAuthAccessToken {
         getAccessTokenCalled += 1

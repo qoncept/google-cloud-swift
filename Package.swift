@@ -1,6 +1,22 @@
 // swift-tools-version:5.8
-
 import PackageDescription
+
+func swiftSettings(strictConcurrency: Bool = true) -> [SwiftSetting] {
+    var settings: [SwiftSetting] = [
+        .enableUpcomingFeature("ForwardTrailingClosures"),
+        .enableUpcomingFeature("ConciseMagicFile"),
+        .enableUpcomingFeature("BareSlashRegexLiterals"),
+        .enableUpcomingFeature("ExistentialAny")
+    ]
+
+    if strictConcurrency {
+        settings.append(
+            .unsafeFlags(["-strict-concurrency=complete"])
+        )
+    }
+
+    return settings
+}
 
 let package = Package(
     name: "google-cloud-swift",
@@ -21,14 +37,16 @@ let package = Package(
                 .product(name: "_CryptoExtras", package: "swift-crypto"),
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
                 .product(name: "JWTKit", package: "jwt-kit"),
-            ]
+            ],
+            swiftSettings: swiftSettings()
         ),
         .target(
             name: "GoogleCloud",
             dependencies: [
                 "GoogleCloudBase",
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
-            ]
+            ],
+            swiftSettings: swiftSettings()
         ),
         .target(
             name: "FirebaseAdmin",
@@ -36,14 +54,16 @@ let package = Package(
                 "GoogleCloudBase",
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
                 .product(name: "JWTKit", package: "jwt-kit"),
-            ]
+            ],
+            swiftSettings: swiftSettings()
         ),
         .testTarget(
             name: "SharedTests",
             dependencies: [
                 "GoogleCloud",
                 "FirebaseAdmin",
-            ]
+            ],
+            swiftSettings: swiftSettings(strictConcurrency: false)
         ),
     ]
 )

@@ -76,7 +76,7 @@ public struct UserRecord: Decodable {
         self.wrappedValue = wrappedValue
     }
     public var wrappedValue: [String: String]
-    public init(from decoder: Decoder) throws {
+    public init(from decoder: any Decoder) throws {
         let c = try decoder.singleValueContainer()
         let jsonString = try c.decode(String.self)
         wrappedValue = try JSONDecoder().decode([String: String].self, from: jsonString.data(using: .utf8) ?? .init())

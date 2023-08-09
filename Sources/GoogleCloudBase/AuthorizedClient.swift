@@ -183,7 +183,7 @@ public struct AuthorizedClient: Sendable {
 }
 
 public struct ErrorResponse: Decodable, Error, CustomStringConvertible, LocalizedError {
-    public struct Error: Decodable {
+    public struct Error: Decodable, Sendable {
         public var code: Int
         public var message: String
         public var status: String?

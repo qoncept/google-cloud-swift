@@ -78,7 +78,7 @@ extension Auth {
             ]
         }
 
-        private func handleClientError<T>(_ error: Error) throws -> Result<T, FirebaseAuthError> {
+        private func handleClientError<T>(_ error: any Error) throws -> Result<T, FirebaseAuthError> {
             if let error = error as? GoogleCloudBase.ErrorResponse {
                 if let error = FirebaseAuthError.decodeErrorResponseMessage(
                     message: error.error.message

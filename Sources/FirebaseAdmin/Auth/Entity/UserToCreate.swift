@@ -1,7 +1,7 @@
 import Foundation
 
 public struct CreateUserError: FirebaseAuthAPIError {
-    public enum Code: String {
+    public enum Code: String, Sendable {
         case invalidUID
         case invalidDisplayName
         case invalidEmail
