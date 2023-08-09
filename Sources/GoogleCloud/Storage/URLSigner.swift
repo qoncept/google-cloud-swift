@@ -167,8 +167,6 @@ struct URLSigner {
     }
 }
 
-private let whitespaceRegex = try! NSRegularExpression(pattern: #"\s{2,}"#, options: [])
-
 private func canonicalize(headers: HTTPHeaders) -> String {
     let sortedKeys = Set(headers.map { $0.name.lowercased() })
         .sorted()
@@ -177,7 +175,9 @@ private func canonicalize(headers: HTTPHeaders) -> String {
             let values = headers[canonicalForm: key]
             let canonicalValue = values.map({ value in
                 let v = String(value)
-                return whitespaceRegex.stringByReplacingMatches(in: v, options: [], range: NSRange(0..<v.count), withTemplate: " ")
+                return v.replacing(/\s{2,}/) { (_) in
+                    " "
+                }
             }).joined(separator: ",")
             return "\(key):\(canonicalValue)\n"
         }

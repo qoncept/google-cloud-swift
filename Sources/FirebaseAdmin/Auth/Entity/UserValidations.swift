@@ -58,7 +58,6 @@ enum UserValidations {
         return .success(())
     }
 
-    static let e164Regex = try! NSRegularExpression(pattern: #"\+.*[0-9A-Za-z]"#)
     static func validatePhone(_ phone: String) -> Result<Void, UserValidationError> {
         if phone.isEmpty {
             return .failure(
@@ -66,7 +65,7 @@ enum UserValidations {
             )
         }
 
-        if e164Regex.numberOfMatches(in: phone, options: [], range: NSRange(location: 0, length: phone.count)) == 0 {
+        if phone.matches(of: /\+.*[0-9A-Za-z]/).isEmpty {
             return .failure(
                 .init(code: .invalidPhoneNumber, message: "phone number must be a valid, E.164 compliant identifier")
             )

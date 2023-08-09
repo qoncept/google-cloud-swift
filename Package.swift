@@ -20,7 +20,7 @@ func swiftSettings(strictConcurrency: Bool = true) -> [SwiftSetting] {
 
 let package = Package(
     name: "google-cloud-swift",
-    platforms: [.macOS(.v12)],
+    platforms: [.macOS(.v13)],
     products: [
         .library(name: "FirebaseAdmin", targets: ["FirebaseAdmin"]),
         .library(name: "GoogleCloud", targets: ["GoogleCloud"]),
