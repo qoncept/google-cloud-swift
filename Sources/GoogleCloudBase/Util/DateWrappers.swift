@@ -69,7 +69,7 @@ struct RFC3339ZDateBase: Codable {
     }
 
     public func encode(to encoder: any Encoder) throws {
-        if let innerValue = innerValue {
+        if let innerValue {
             var c = encoder.singleValueContainer()
             try c.encode(innerValue)
         }

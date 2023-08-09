@@ -57,7 +57,7 @@ extension Auth {
 
         private func makeUserMtgPath(path: String) -> String {
             let tmpURL = URL(fileURLWithPath: "/")
-            if let tenantID = tenantID {
+            if let tenantID {
                 return tmpURL.appendingPathComponent("projects")
                     .appendingPathComponent(projectID)
                     .appendingPathComponent("tenants")

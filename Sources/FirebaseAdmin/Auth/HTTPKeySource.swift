@@ -58,7 +58,7 @@ actor HTTPKeySource {
     }
 
     private func refreshKeys() async throws {
-        if let refreshingTask = refreshingTask {
+        if let refreshingTask {
             return try await refreshingTask.value
         }
 

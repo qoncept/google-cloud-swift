@@ -147,7 +147,7 @@ public struct UpdateUserProperties {
             }
         }
 
-        if let email = email {
+        if let email {
             switch UserValidations.validateEmail(email) {
             case .failure(let error): return .failure(.init(error))
             case .success: break
@@ -168,7 +168,7 @@ public struct UpdateUserProperties {
             }
         }
 
-        if let password = password {
+        if let password {
             switch UserValidations.validatePassword(password: password) {
             case .failure(let error): return .failure(.init(error))
             case .success: break

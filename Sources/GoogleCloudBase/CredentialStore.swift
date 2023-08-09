@@ -42,7 +42,7 @@ public actor CredentialStore {
     }
 
     private func refreshToken() async throws -> OAuth2Token {
-        if let refreshingTask = refreshingTask {
+        if let refreshingTask {
             return try await refreshingTask.value
         }
 
