@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - RFC3339Z
+
 struct RFC3339ZDateBase: Codable {
     var value: Date
     init(value: Date) {
@@ -82,33 +84,71 @@ extension KeyedDecodingContainer {
     }
 }
 
-@propertyWrapper public struct StringMilliUnixDate: Decodable {
-    public init(wrappedValue: Date) {
-        self.wrappedValue = wrappedValue
+// MARK: - StringMilliUnix
+
+struct StringMilliUnixDateBase: Codable {
+    var value: Date
+    init(value: Date) {
+        self.value = value
     }
-    public var wrappedValue: Date
-    public init(from decoder: any Decoder) throws {
+    init(from decoder: any Decoder) throws {
         let c = try decoder.singleValueContainer()
         let jsonString = try c.decode(String.self)
         guard let number = TimeInterval(jsonString) else {
             throw DecodingError.dataCorruptedError(in: c, debugDescription: "expected number string")
         }
-        wrappedValue = Date(timeIntervalSince1970: number / 1000)
+        value = Date(timeIntervalSince1970: number / 1000)
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var c = encoder.singleValueContainer()
+        let unixMilli = Int(floor(value.timeIntervalSince1970 * 1000))
+        try c.encode(unixMilli.description)
     }
 }
 
-@propertyWrapper public struct StringMilliUnixOptionalDate: Decodable {
-    public init(wrappedValue: Date? = nil) {
-        self.wrappedValue = wrappedValue
+
+@propertyWrapper public struct StringMilliUnixDate: Codable {
+    public init(wrappedValue: Date) {
+        self.innerValue = .init(value: wrappedValue)
     }
-    public var wrappedValue: Date?
+    private var innerValue: StringMilliUnixDateBase
+    public var wrappedValue: Date {
+        get { innerValue.value }
+        set { innerValue.value = newValue }
+    }
+
     public init(from decoder: any Decoder) throws {
         let c = try decoder.singleValueContainer()
-        let jsonString = try c.decode(String.self)
-        guard let number = TimeInterval(jsonString) else {
-            throw DecodingError.dataCorruptedError(in: c, debugDescription: "expected number string")
+        innerValue = try c.decode(StringMilliUnixDateBase.self)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.singleValueContainer()
+        try c.encode(innerValue)
+    }
+}
+
+@propertyWrapper public struct StringMilliUnixOptionalDate: Codable {
+    public init(wrappedValue: Date?) {
+        self.innerValue = wrappedValue.map { .init(value: $0) }
+    }
+    private var innerValue: StringMilliUnixDateBase?
+    public var wrappedValue: Date? {
+        get { innerValue?.value }
+        set { innerValue = newValue.map { .init(value: $0) } }
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        innerValue = try c.decode(StringMilliUnixDateBase.self)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        if let innerValue {
+            var c = encoder.singleValueContainer()
+            try c.encode(innerValue)
         }
-        wrappedValue = Date(timeIntervalSince1970: number)
     }
 }
 
