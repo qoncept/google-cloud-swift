@@ -6,7 +6,7 @@ import Logging
 private let testingProjectID = "testing-project-id"
 
 final class AuthTest: XCTestCase {
-    private static let client = AsyncHTTPClient.HTTPClient(eventLoopGroupProvider: .createNew)
+    private static let client = AsyncHTTPClient.HTTPClient(eventLoopGroupProvider: .singleton)
 
     private static var emulatorURL: URL? = Auth.emulatorBaseURL()
 

@@ -26,20 +26,20 @@ enum HTTPKeySourceError: Error, LocalizedError {
 
 actor HTTPKeySource {
     private let client: HTTPClient
-    private let clock: Clock
+    private let clock: any Clock
     private var willRefreshKeys: (() -> ())?
     func setWillRefreshKeys(_ c: (() -> ())?) {
         willRefreshKeys = c
     }
 
-    init(client: HTTPClient, clock: Clock = .default) {
+    init(client: HTTPClient, clock: any Clock = .default) {
         self.client = client
         self.clock = clock
     }
 
     private var cachedKeys: JWTSigners?
     private var expiryTime: Date = .init(timeIntervalSince1970: 0)
-    private var refreshingTask: Task<Void, Error>?
+    private var refreshingTask: Task<Void, any Error>?
 
     func publicKeys() async throws -> JWTSigners {
         if cachedKeys == nil || hasExpired {
@@ -58,7 +58,7 @@ actor HTTPKeySource {
     }
 
     private func refreshKeys() async throws {
-        if let refreshingTask = refreshingTask {
+        if let refreshingTask {
             return try await refreshingTask.value
         }
 
