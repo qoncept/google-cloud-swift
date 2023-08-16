@@ -17,4 +17,6 @@ services:
     image: ghcr.io/goccy/bigquery-emulator:latest
     ports:
       - 9050:9050
-    command: --project=testing-project-id
+    volumes:
+      - ./fixtures/bigquery:/data
+    command: --project=testing-project-id --data-from-yaml=/data/data.yml
