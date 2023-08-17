@@ -13,4 +13,10 @@ services:
     volumes:
       - ./firebase:/work
     command: firebase emulators:start --only auth -P testing-project-id
-
+  bigquery:
+    image: ghcr.io/goccy/bigquery-emulator:latest
+    ports:
+      - 9050:9050
+    volumes:
+      - ./fixtures/bigquery:/data
+    command: --project=testing-project-id --data-from-yaml=/data/data.yml
