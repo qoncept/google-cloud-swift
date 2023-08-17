@@ -51,7 +51,7 @@ public struct BigQuery: Sendable {
         }
 
         return try response.rows.map { row in
-            return try SQLRowDecoder()
+            return try BigQueryRowDecoder()
                 .decode(Row.self, from: BigQueryQueryResponseView(response: response, row: row))
         }
     }
