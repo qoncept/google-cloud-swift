@@ -37,7 +37,7 @@ struct BigQueryQueryResponse: Decodable {
     struct TableSchema: Decodable {
         struct TableFieldSchema: Decodable {
             var name: String
-            var type: String
+            var type: BigQueryDataType
             var mode: String?
             var fields: [TableFieldSchema]?
         }

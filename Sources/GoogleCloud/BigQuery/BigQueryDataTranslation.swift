@@ -13,7 +13,7 @@ enum BigQueryDataTranslation {
                 rawQuery.append("@\(paramName)")
                 parameters.append(.init(
                     name: paramName,
-                    parameterType: .init(type: type(of: param).parameterDataType),
+                    parameterType: .init(type: type(of: param).parameterDataType.rawValue),
                     parameterValue: .init(value: param.parameterDataValue())
                 ))
             }
@@ -22,7 +22,7 @@ enum BigQueryDataTranslation {
         return (rawQuery, parameters)
     }
 
-    static func decode<D: Decodable>(_ type: D.Type, dataType: String, dataValue: String) throws -> D {
+    static func decode<D: Decodable>(_ type: D.Type, dataType: BigQueryDataType, dataValue: String) throws -> D {
         if let fastPathType = type as? any BigQueryDecodable.Type {
             return try fastPathType.init(dataType: dataType, dataValue: dataValue) as! D
         } else {

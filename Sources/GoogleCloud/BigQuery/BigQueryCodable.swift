@@ -1,12 +1,12 @@
 import Foundation
 
 public protocol BigQueryEncodable {
-    static var parameterDataType: String { get }
+    static var parameterDataType: BigQueryDataType { get }
     func parameterDataValue() -> String
 }
 
 public protocol BigQueryDecodable {
-    init(dataType: String, dataValue: String) throws
+    init(dataType: BigQueryDataType, dataValue: String) throws
 }
 
 public typealias BigQueryCodable = BigQueryEncodable & BigQueryDecodable
@@ -21,7 +21,7 @@ extension CustomStringConvertible where Self: BigQueryEncodable {
 }
 
 extension LosslessStringConvertible where Self: BigQueryDecodable {
-    public init(dataType: String, dataValue: String) throws {
+    public init(dataType: BigQueryDataType, dataValue: String) throws {
         guard let result = Self.init(dataValue) else {
             throw DecodingError.dataCorrupted(.init(
                 codingPath: [],
@@ -33,64 +33,64 @@ extension LosslessStringConvertible where Self: BigQueryDecodable {
 }
 
 extension Int: BigQueryCodable {
-    public static var parameterDataType: String { "INT64" }
+    public static var parameterDataType: BigQueryDataType { .int64 }
 }
 extension Int8: BigQueryCodable {
-    public static var parameterDataType: String { "INT64" }
+    public static var parameterDataType: BigQueryDataType { .int64 }
 }
 extension Int16: BigQueryCodable {
-    public static var parameterDataType: String { "INT64" }
+    public static var parameterDataType: BigQueryDataType { .int64 }
 }
 extension Int32: BigQueryCodable {
-    public static var parameterDataType: String { "INT64" }
+    public static var parameterDataType: BigQueryDataType { .int64 }
 }
 extension Int64: BigQueryCodable {
-    public static var parameterDataType: String { "INT64" }
+    public static var parameterDataType: BigQueryDataType { .int64 }
 }
 extension UInt: BigQueryCodable {
-    public static var parameterDataType: String { "INT64" }
+    public static var parameterDataType: BigQueryDataType { .int64 }
 }
 extension UInt8: BigQueryCodable {
-    public static var parameterDataType: String { "INT64" }
+    public static var parameterDataType: BigQueryDataType { .int64 }
 }
 extension UInt16: BigQueryCodable {
-    public static var parameterDataType: String { "INT64" }
+    public static var parameterDataType: BigQueryDataType { .int64 }
 }
 extension UInt32: BigQueryCodable {
-    public static var parameterDataType: String { "INT64" }
+    public static var parameterDataType: BigQueryDataType { .int64 }
 }
 extension UInt64: BigQueryCodable {
-    public static var parameterDataType: String { "INT64" }
+    public static var parameterDataType: BigQueryDataType { .int64 }
 }
 extension Float16: BigQueryCodable {
-    public static var parameterDataType: String { "FLOAT64" }
+    public static var parameterDataType: BigQueryDataType { .float64 }
 }
 extension Float32: BigQueryCodable {
-    public static var parameterDataType: String { "FLOAT64" }
+    public static var parameterDataType: BigQueryDataType { .float64 }
 }
 extension Float64: BigQueryCodable {
-    public static var parameterDataType: String { "FLOAT64" }
+    public static var parameterDataType: BigQueryDataType { .float64 }
 }
 extension String: BigQueryCodable {
-    public static var parameterDataType: String { "STRING" }
+    public static var parameterDataType: BigQueryDataType { .string }
 }
 extension Bool: BigQueryCodable {
-    public static var parameterDataType: String { "BOOL" }
+    public static var parameterDataType: BigQueryDataType { .bool }
 }
 extension Date: BigQueryCodable {
-    public static var parameterDataType: String { "TIMESTAMP" }
+    public static var parameterDataType: BigQueryDataType { .timestamp }
     public func parameterDataValue() -> String {
         self.timeIntervalSince1970.parameterDataValue()
     }
 
-    public init(dataType: String, dataValue: String) throws {
+    public init(dataType: BigQueryDataType, dataValue: String) throws {
         switch dataType {
-        case "TIMESTAMP":
+        case .timestamp:
             guard let t = TimeInterval(dataValue) else {
                 throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "\"\(dataValue)\" is not double"))
             }
             self = .init(timeIntervalSince1970: t)
-        case "DATETIME":
+        case .datetime:
             let formatter = ISO8601DateFormatter()
             formatter.formatOptions.insert(.withFractionalSeconds)
             formatter.formatOptions.remove(.withTimeZone)
