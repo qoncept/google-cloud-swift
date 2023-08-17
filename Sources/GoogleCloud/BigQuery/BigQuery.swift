@@ -10,6 +10,7 @@ public struct BigQuery: Sendable {
     public var projectID: String
     private let credentialStore: CredentialStore
     private let authorizedClient: AuthorizedClient
+    public var useLegacySql: Bool = false
 
     public init(
         projectID: String,
@@ -40,9 +41,11 @@ public struct BigQuery: Sendable {
         decoding rowType: Row.Type
     ) async throws -> [Row] {
         let (query, binds) = BigQueryDataTranslation.encode(query)
+        var request = BigQueryQueryRequest(query: query, queryParameters: binds)
+        request.useLegacySql = useLegacySql
         let response = try await authorizedClient.post(
             path: "bigquery/v2/projects/\(projectID)/queries",
-            payload: BigQueryQueryRequest(query: query, queryParameters: binds),
+            payload: request,
             responseType: BigQueryQueryResponse.self
         )
 

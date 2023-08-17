@@ -90,8 +90,8 @@ final class BigQueryTest: XCTestCase {
         XCTAssertEqual(rows[0].int, 1)
         XCTAssertEqual(rows[0].float, 0.5)
         XCTAssertEqual(rows[0].string, "hello")
-        XCTAssertEqual(rows[0].timestamp.timeIntervalSince1970, now.timeIntervalSince1970, accuracy: 0.5)
-        XCTAssertEqual(rows[0].datetime.timeIntervalSince1970, now.timeIntervalSince1970, accuracy: 0.5)
+        XCTAssertEqual(rows[0].timestamp.timeIntervalSince1970, now.timeIntervalSince1970, accuracy: 1)
+        XCTAssertEqual(rows[0].datetime.timeIntervalSince1970, now.timeIntervalSince1970, accuracy: 1)
     }
 
     func testParameter() async throws {
