@@ -41,7 +41,7 @@ final class BigQueryTest: XCTestCase {
         let _ = try JSONDecoder().decode(BigQueryQueryResponse.self, from: data)
     }
 
-    func testSimpleColumns() async throws {
+    func testBasic() async throws {
         let bigQuery = makeBigQuery()
 
         struct Row: Decodable {
@@ -61,5 +61,54 @@ final class BigQueryTest: XCTestCase {
         XCTAssertEqual(rows[0].skillNum, 3)
         XCTAssertEqual(rows[0].created_at, Date(timeIntervalSince1970: 1641038400))
         XCTAssertEqual(rows[1].skillNum, nil)
+    }
+
+    func testDecodePrimitives() async throws {
+        let bigQuery = makeBigQuery()
+
+        struct Row: Decodable {
+            var bool: Bool
+            var int: Int
+            var float: Float
+            var string: String
+            var timestamp: Date
+            var datetime: Date
+        }
+        let now = Date()
+        let rows = try await bigQuery.query("""
+            SELECT
+                true AS `bool`
+                , 1 AS `int`
+                , 0.5 AS `float`
+                , 'hello' AS `string`
+                , CURRENT_TIMESTAMP() AS `timestamp`
+                , CURRENT_DATETIME() AS `datetime`
+        """, decoding: Row.self)
+
+        XCTAssertEqual(rows.count, 1)
+        XCTAssertEqual(rows[0].bool, true)
+        XCTAssertEqual(rows[0].int, 1)
+        XCTAssertEqual(rows[0].float, 0.5)
+        XCTAssertEqual(rows[0].string, "hello")
+        XCTAssertEqual(rows[0].timestamp.timeIntervalSince1970, now.timeIntervalSince1970, accuracy: 0.5)
+        XCTAssertEqual(rows[0].datetime.timeIntervalSince1970, now.timeIntervalSince1970, accuracy: 0.5)
+    }
+
+    func testParameter() async throws {
+        let bigQuery = makeBigQuery()
+
+        struct Row: Decodable {
+            var id: Int
+            var name: String
+            var skillNum: Int?
+            var created_at: Date
+        }
+        let rows = try await bigQuery.query(
+            "SELECT * FROM dataset1.table_a WHERE id = \(bind: 1)",
+            decoding: Row.self
+        )
+
+        XCTAssertEqual(rows.count, 1)
+        XCTAssertEqual(rows[0].id, 1)
     }
 }

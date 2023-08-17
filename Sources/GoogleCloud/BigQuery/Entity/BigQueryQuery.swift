@@ -94,16 +94,19 @@ protocol SQLRow {
 }
 
 struct BigQueryQueryResponseView: SQLRow {
-    var allColumns: [String]
+    var allColumns: [String] {
+        columns.map(\.name)
+    }
+    var columns: [BigQueryQueryResponse.TableSchema.TableFieldSchema]
     var row: BigQueryQueryResponse.Row
 
     init(response: BigQueryQueryResponse, row: BigQueryQueryResponse.Row) {
-        self.allColumns = response.schema?.fields.map(\.name) ?? []
+        self.columns = response.schema?.fields ?? []
         self.row = row
     }
 
     func contains(column: String) -> Bool {
-        allColumns.contains(column)
+        columns.contains { $0.name == column }
     }
 
     enum _Error: Error {
@@ -112,7 +115,7 @@ struct BigQueryQueryResponseView: SQLRow {
     }
 
     func decodeNil(column: String) throws -> Bool {
-        guard let i = allColumns.firstIndex(of: column) else {
+        guard let i = columns.firstIndex(where: { $0.name == column}) else {
             return true
         }
         switch row.f[i] {
@@ -123,22 +126,14 @@ struct BigQueryQueryResponseView: SQLRow {
         }
     }
 
-    func decode<D>(column: String, as type: D.Type) throws -> D where D : Decodable {
-        guard let i = allColumns.firstIndex(of: column) else {
+    func decode<D: Decodable>(column: String, as type: D.Type) throws -> D {
+        guard let i = columns.firstIndex(where: { $0.name == column}) else {
             throw _Error.missingColumn
         }
 
         switch row.f[i] {
-        case .nonRepeating(.some(var value)):
-            // TODO: define BigQueryDecodable or use some magic
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .secondsSince1970
-            do {
-                return try decoder.decode(type, from: Data(value.utf8))
-            } catch {
-                value = "\"\(value)\""
-                return try decoder.decode(type, from: Data(value.utf8))
-            }
+        case .nonRepeating(.some(let value)):
+            return try BigQueryDataTranslation.decode(type, dataType: columns[i].type, dataValue: value)
         default:
             throw _Error.typeMismatch
         }

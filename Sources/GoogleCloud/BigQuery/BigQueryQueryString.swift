@@ -1,7 +1,7 @@
 public struct BigQueryQueryString {
     @usableFromInline enum Fragment {
         case raw(String)
-        case parameter(any BigQueryParameterEncodable)
+        case parameter(any BigQueryEncodable)
     }
 
     @usableFromInline
@@ -44,7 +44,7 @@ extension BigQueryQueryString: StringInterpolationProtocol {
     }
 
     @inlinable
-    public mutating func appendInterpolation(bind value: any BigQueryParameterEncodable) {
+    public mutating func appendInterpolation(bind value: any BigQueryEncodable) {
         self.fragments.append(.parameter(value))
     }
 

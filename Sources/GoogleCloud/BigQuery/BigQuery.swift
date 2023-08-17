@@ -39,10 +39,10 @@ public struct BigQuery: Sendable {
         _ query: BigQueryQueryString,
         decoding rowType: Row.Type
     ) async throws -> [Row] {
-        let request = BigQueryQueryEncoder.encode(query)
+        let (query, binds) = BigQueryDataTranslation.encode(query)
         let response = try await authorizedClient.post(
             path: "bigquery/v2/projects/\(projectID)/queries",
-            payload: request,
+            payload: BigQueryQueryRequest(query: query, queryParameters: binds),
             responseType: BigQueryQueryResponse.self
         )
 
