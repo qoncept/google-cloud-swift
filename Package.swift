@@ -1,20 +1,13 @@
 // swift-tools-version:5.8
 import PackageDescription
 
-func swiftSettings(strictConcurrency: Bool = true) -> [SwiftSetting] {
-    var settings: [SwiftSetting] = [
+func swiftSettings() -> [SwiftSetting] {
+    let settings: [SwiftSetting] = [
         .enableUpcomingFeature("ForwardTrailingClosures"),
         .enableUpcomingFeature("ConciseMagicFile"),
         .enableUpcomingFeature("BareSlashRegexLiterals"),
         .enableUpcomingFeature("ExistentialAny")
     ]
-
-    if strictConcurrency {
-        settings.append(
-            .unsafeFlags(["-strict-concurrency=complete"])
-        )
-    }
-
     return settings
 }
 
@@ -63,7 +56,7 @@ let package = Package(
                 "GoogleCloud",
                 "FirebaseAdmin",
             ],
-            swiftSettings: swiftSettings(strictConcurrency: false)
+            swiftSettings: swiftSettings()
         ),
     ]
 )
