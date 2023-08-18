@@ -62,9 +62,6 @@ extension UInt32: BigQueryCodable {
 extension UInt64: BigQueryCodable {
     public static var parameterDataType: BigQueryDataType { .int64 }
 }
-extension Float16: BigQueryCodable {
-    public static var parameterDataType: BigQueryDataType { .float64 }
-}
 extension Float32: BigQueryCodable {
     public static var parameterDataType: BigQueryDataType { .float64 }
 }
