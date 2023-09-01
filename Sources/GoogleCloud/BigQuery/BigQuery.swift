@@ -54,29 +54,6 @@ public struct BigQuery: Sendable {
             .reduce(into: [], { $0.append(contentsOf: $1) })
     }
 
-    private func queryInternal(
-        _ query: BigQueryQueryString,
-        options: QueryOptions = QueryOptions()
-    ) async throws -> BigQueryQueryResponse {
-        let (query, binds) = BigQueryDataTranslation.encode(query)
-        
-        var request = BigQueryQueryRequest(query: query, queryParameters: binds)
-        request.maxResults = options.maxResults
-        request.useLegacySql = options.useLegacySql
-
-        let response = try await authorizedClient.post(
-            path: "bigquery/v2/projects/\(projectID)/queries",
-            payload: request,
-            responseType: BigQueryQueryResponse.self
-        )
-
-        if let errors = response.errors, !errors.isEmpty {
-            throw BigQueryErrors(errors: errors)
-        }
-
-        return response
-    }
-
     public func queryStream<Row: Decodable>(
         _ query: BigQueryQueryString,
         options: QueryOptions = QueryOptions(),
@@ -131,6 +108,29 @@ public struct BigQuery: Sendable {
                 }
             }
         }
+    }
+
+    private func queryInternal(
+        _ query: BigQueryQueryString,
+        options: QueryOptions = QueryOptions()
+    ) async throws -> BigQueryQueryResponse {
+        let (query, binds) = BigQueryDataTranslation.encode(query)
+
+        var request = BigQueryQueryRequest(query: query, queryParameters: binds)
+        request.maxResults = options.maxResults
+        request.useLegacySql = options.useLegacySql
+
+        let response = try await authorizedClient.post(
+            path: "bigquery/v2/projects/\(projectID)/queries",
+            payload: request,
+            responseType: BigQueryQueryResponse.self
+        )
+
+        if let errors = response.errors, !errors.isEmpty {
+            throw BigQueryErrors(errors: errors)
+        }
+
+        return response
     }
 
     private func getQueryResult(
