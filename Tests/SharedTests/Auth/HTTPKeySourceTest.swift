@@ -6,7 +6,7 @@ final class HTTPKeySourceTest: XCTestCase {
     private let mockClock: MockClock = .init()
 
     private func makeKeySource() -> HTTPKeySource {
-        let client = HTTPClient(eventLoopGroupProvider: .createNew)
+        let client = HTTPClient(eventLoopGroupProvider: .singleton)
         addTeardownBlock {
             try! client.syncShutdown()
         }
