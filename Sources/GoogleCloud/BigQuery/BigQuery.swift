@@ -50,12 +50,8 @@ public struct BigQuery: Sendable {
         options: QueryOptions = QueryOptions(),
         decoding rowType: Row.Type
     ) async throws -> [Row] {
-        let response = try await queryInternal(query, options: options)
-
-        return try response.rows.map { row in
-            return try BigQueryRowDecoder()
-                .decode(rowType, from: BigQueryQueryResponseView(response: response, row: row))
-        }
+        return try await queryStream(query, options: options, decoding: rowType)
+            .reduce(into: [], { $0.append(contentsOf: $1) })
     }
 
     private func queryInternal(
@@ -85,8 +81,8 @@ public struct BigQuery: Sendable {
         _ query: BigQueryQueryString,
         options: QueryOptions = QueryOptions(),
         decoding rowType: Row.Type
-    ) -> AsyncThrowingStream<Row, any Error> {
-        return AsyncThrowingStream(rowType, bufferingPolicy: .unbounded) { (continuetion) in
+    ) -> AsyncThrowingStream<[Row], any Error> {
+        return AsyncThrowingStream([Row].self, bufferingPolicy: .unbounded) { (continuetion) in
             let cancel = NIOLockedValueBox(false)
 
             continuetion.onTermination = { (termination) in
@@ -101,15 +97,13 @@ public struct BigQuery: Sendable {
                     let response = try await queryInternal(query, options: options)
                     var nextPageToken: String? = response.pageToken
 
-                    for row in response.rows {
-                        let decoded = try decoder.decode(rowType, from: BigQueryQueryResponseView(response: response, row: row))
-                        if case .terminated = continuetion.yield(decoded) {
-                            nextPageToken = nil
-                            break
-                        }
+                    let decoded = try response.rows.map {
+                        try decoder.decode(rowType, from: BigQueryQueryResponseView(response: response, row: $0))
+                    }
+                    if case .terminated = continuetion.yield(decoded) {
+                        nextPageToken = nil
                     }
 
-                loop:
                     while let pageToken = nextPageToken, !pageToken.isEmpty,
                           !cancel.withLockedValue({ $0 }) {
                         let response = try await getQueryResult(
@@ -118,11 +112,11 @@ public struct BigQuery: Sendable {
                             options: options
                         )
 
-                        for row in response.rows {
-                            let decoded = try decoder.decode(rowType, from: BigQueryQueryResponseView(response: response, row: row))
-                            if case .terminated = continuetion.yield(decoded) {
-                                break loop
-                            }
+                        let decoded = try response.rows.map {
+                            try decoder.decode(rowType, from: BigQueryQueryResponseView(response: response, row: $0))
+                        }
+                        if case .terminated = continuetion.yield(decoded) {
+                            break
                         }
 
                         nextPageToken = response.pageToken
