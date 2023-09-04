@@ -1,7 +1,6 @@
 import AsyncHTTPClient
 import Foundation
 import GoogleCloudBase
-import NIOConcurrencyHelpers
 import NIOHTTP1
 
 let bigqueryEmulatorHostEnvVar = "BIGQUERY_EMULATOR_HOST"
@@ -60,15 +59,7 @@ public struct BigQuery: Sendable {
         decoding rowType: Row.Type
     ) -> AsyncThrowingStream<[Row], any Error> {
         return AsyncThrowingStream([Row].self, bufferingPolicy: .unbounded) { (continuetion) in
-            let cancel = NIOLockedValueBox(false)
-
-            continuetion.onTermination = { (termination) in
-                cancel.withLockedValue { value in
-                    value = true
-                }
-            }
-
-            Task {
+            let task = Task {
                 let decoder = BigQueryRowDecoder()
                 do {
                     let response = try await queryInternal(query, options: options)
@@ -81,8 +72,7 @@ public struct BigQuery: Sendable {
                         nextPageToken = nil
                     }
 
-                    while let pageToken = nextPageToken, !pageToken.isEmpty,
-                          !cancel.withLockedValue({ $0 }) {
+                    while let pageToken = nextPageToken, !pageToken.isEmpty {
                         let response = try await getQueryResult(
                             jobReference: response.jobReference,
                             pageToken: pageToken,
@@ -98,11 +88,15 @@ public struct BigQuery: Sendable {
 
                         nextPageToken = response.pageToken
                     }
-                    
+
                     continuetion.finish()
                 } catch {
                     continuetion.finish(throwing: error)
                 }
+            }
+
+            continuetion.onTermination = { (termination) in
+                task.cancel()
             }
         }
     }
