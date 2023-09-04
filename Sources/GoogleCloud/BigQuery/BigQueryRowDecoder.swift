@@ -25,8 +25,8 @@ struct BigQueryQueryResponseView: SQLRow {
     }
 
     enum _Error: Error {
-        case missingColumn
-        case typeMismatch
+        case missingColumn(String)
+        case typeMismatch([any CodingKey])
     }
 
     func decodeNil(column: String) throws -> Bool {
@@ -43,14 +43,14 @@ struct BigQueryQueryResponseView: SQLRow {
 
     func decode<D: Decodable>(column: String, as type: D.Type, codingPath: [any CodingKey]) throws -> D {
         guard let i = columns.firstIndex(where: { $0.name == column}) else {
-            throw _Error.missingColumn
+            throw _Error.missingColumn(column)
         }
 
         switch row.f[i] {
         case .nonRepeating(.some(let value)):
             return try BigQueryDataTranslation.decode(type, dataType: columns[i].type, dataValue: value, codingPath: codingPath)
         default:
-            throw _Error.typeMismatch
+            throw _Error.typeMismatch(codingPath)
         }
     }
 }
