@@ -48,11 +48,7 @@ public struct AuthorizedClient: Sendable {
             headers: try await mergedHeaders(headers)
         )
         logger.debug("GET \(req.url.absoluteString)")
-        let res = try await httpClient.execute(
-            request: req,
-            deadline: .now() + .milliseconds(25000),
-            logger: logger
-        ).get()
+        let res = try await send(request: req)
 
         return try handleResponse(res: res)
     }
@@ -95,11 +91,7 @@ public struct AuthorizedClient: Sendable {
             body: .data(payload)
         )
         logger.debug("POST \(req.url.absoluteString)")
-        let res = try await httpClient.execute(
-            request: req,
-            deadline: .now() + .milliseconds(25000),
-            logger: logger
-        ).get()
+        let res = try await send(request: req)
 
         return try handleResponse(res: res)
     }
@@ -114,12 +106,8 @@ public struct AuthorizedClient: Sendable {
             headers: try await mergedHeaders(headers)
         )
         logger.debug("DELETE \(req.url.absoluteString)")
-        let res = try await httpClient.execute(
-            request: req,
-            deadline: .now() + .milliseconds(25000),
-            logger: logger
-        ).get()
-
+        let res = try await send(request: req)
+        
         return try handleResponse(res: res)
     }
 
@@ -133,6 +121,21 @@ public struct AuthorizedClient: Sendable {
             headers.add(name: "Content-Type", value: "application/json")
         }
         return headers
+    }
+
+    private func send(request: HTTPClient.Request) async throws -> HTTPClient.Response {
+        let accumulator = ResponseAccumulator(request: request)
+        let task = httpClient.execute(
+            request: request,
+            delegate: accumulator,
+            deadline: .now() + .seconds(25),
+            logger: logger
+        )
+        return try await withTaskCancellationHandler {
+            try await task.get()
+        } onCancel: {
+            task.cancel()
+        }
     }
 
     private func handleResponse<Response: Decodable>(res: HTTPClient.Response, responseType: Response.Type = Response.self) throws -> Response {

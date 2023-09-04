@@ -5,6 +5,7 @@ import Foundation
 struct BigQueryQueryRequest: Encodable {
     var kind: String? // ?
     var query: String
+    var maxResults: Int?
 
     struct DatasetReference: Encodable {
         var datasetId: String
@@ -44,6 +45,13 @@ struct BigQueryQueryResponse: Decodable {
         var fields: [TableFieldSchema]
     }
     var schema: TableSchema?
+
+    struct JobReference: Decodable {
+        var projectId: String
+        var jobId: String
+        var location: String?
+    }
+    var jobReference: JobReference
 
     struct Row: Decodable {
         struct NestedColumnValue: Decodable {
