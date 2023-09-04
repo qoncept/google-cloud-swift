@@ -113,7 +113,7 @@ extension BigQueryEncodable where Self: RawRepresentable, RawValue: BigQueryEnco
     }
 }
 
-extension BigQueryEncodable where Self: RawRepresentable, RawValue: BigQueryDecodable {
+extension BigQueryDecodable where Self: RawRepresentable, RawValue: BigQueryDecodable {
     init(dataType: BigQueryDataType, dataValue: String) throws {
         let raw = try RawValue(dataType: dataType, dataValue: dataValue)
         guard let result = Self.init(rawValue: raw) else {
