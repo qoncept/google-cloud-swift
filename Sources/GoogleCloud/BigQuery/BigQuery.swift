@@ -98,11 +98,8 @@ public struct BigQuery: Sendable {
 
                         nextPageToken = response.pageToken
                     }
-
-                    let isCancel = cancel.withLockedValue({ $0 })
-                    if !isCancel {
-                        continuetion.finish()
-                    }
+                    
+                    continuetion.finish()
                 } catch {
                     continuetion.finish(throwing: error)
                 }
