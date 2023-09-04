@@ -22,18 +22,20 @@ enum BigQueryDataTranslation {
         return (rawQuery, parameters)
     }
 
-    static func decode<D: Decodable>(_ type: D.Type, dataType: BigQueryDataType, dataValue: String) throws -> D {
+    static func decode<D: Decodable>(_ type: D.Type, dataType: BigQueryDataType, dataValue: String, codingPath: [any CodingKey]) throws -> D {
         if let fastPathType = type as? any BigQueryDecodable.Type {
             return try fastPathType.init(dataType: dataType, dataValue: dataValue) as! D
         } else {
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .secondsSince1970
-            var value = dataValue
             do {
-                return try decoder.decode(type, from: Data(value.utf8))
+                return try decoder.decode(type, from: Data(dataValue.utf8))
             } catch {
-                value = "\"\(value)\""
-                return try decoder.decode(type, from: Data(value.utf8))
+                do {
+                    return try decoder.decode(type, from: Data("\"\(dataValue)\"".utf8))
+                } catch {
+                    throw DecodingError.dataCorrupted(.init(codingPath: codingPath, debugDescription: "\"\(dataValue)\" cannot decode to \(type)"))
+                }
             }
         }
     }

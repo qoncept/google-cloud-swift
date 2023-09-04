@@ -5,7 +5,7 @@ protocol SQLRow {
     var allColumns: [String] { get }
     func contains(column: String) -> Bool
     func decodeNil(column: String) throws -> Bool
-    func decode<D>(column: String, as type: D.Type) throws -> D where D: Decodable
+    func decode<D>(column: String, as type: D.Type, codingPath: [any CodingKey]) throws -> D where D: Decodable
 }
 
 struct BigQueryQueryResponseView: SQLRow {
@@ -41,14 +41,14 @@ struct BigQueryQueryResponseView: SQLRow {
         }
     }
 
-    func decode<D: Decodable>(column: String, as type: D.Type) throws -> D {
+    func decode<D: Decodable>(column: String, as type: D.Type, codingPath: [any CodingKey]) throws -> D {
         guard let i = columns.firstIndex(where: { $0.name == column}) else {
             throw _Error.missingColumn
         }
 
         switch row.f[i] {
         case .nonRepeating(.some(let value)):
-            return try BigQueryDataTranslation.decode(type, dataType: columns[i].type, dataValue: value)
+            return try BigQueryDataTranslation.decode(type, dataType: columns[i].type, dataValue: value, codingPath: codingPath)
         default:
             throw _Error.typeMismatch
         }
@@ -120,13 +120,16 @@ struct BigQueryRowDecoder {
             try row.decodeNil(column: column(for: key))
         }
 
-        func decode<T>(_ type: T.Type, forKey key: Key) throws -> T
-        where T : Decodable
+        func decode<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T
         {
-            try row.decode(column: column(for: key), as: T.self)
+            try row.decode(
+                column: column(for: key),
+                as: T.self,
+                codingPath: codingPath + CollectionOfOne<any CodingKey>(key)
+            )
         }
 
-        func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey
+        func nestedContainer<NestedKey: CodingKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws -> KeyedDecodingContainer<NestedKey>
         {
             throw _Error.nesting
         }
