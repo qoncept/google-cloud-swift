@@ -10,7 +10,7 @@ private let defaultAPIEndpoint = URL(string: "https://bigquery.googleapis.com/")
 public struct BigQuery: Sendable {
     public var projectID: String
     private let credentialStore: CredentialStore
-    private let authorizedClient: AuthorizedClient
+    private var authorizedClient: AuthorizedClient
 
     public init(
         projectID: String,
@@ -139,9 +139,9 @@ public struct BigQuery: Sendable {
             path: "bigquery/v2/projects/\(jobReference.projectId)/queries/\(jobReference.jobId)",
             queryItems: [
                 .init(name: "pageToken", value: pageToken),
-                .init(name: "maxResults", value: options.maxResults?.description),
+                options.maxResults.map { .init(name: "maxResults", value: $0.description) },
                 .init(name: "location", value: jobReference.location),
-            ],
+            ].compactMap({ $0 }),
             responseType: BigQueryQueryResponse.self
         )
 
