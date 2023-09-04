@@ -89,7 +89,6 @@ extension Date: BigQueryCodable {
             self = .init(timeIntervalSince1970: t)
         case .datetime:
             let formatter = ISO8601DateFormatter()
-            formatter.timeZone = .gmt
             formatter.formatOptions.remove(.withTimeZone)
             guard let d = formatter.date(from: dataValue) else {
                 formatter.formatOptions.insert(.withFractionalSeconds)
