@@ -123,6 +123,21 @@ public struct AuthorizedClient: Sendable {
         return headers
     }
 
+    private func send(request: HTTPClient.Request) async throws -> HTTPClient.Response {
+        let accumulator = ResponseAccumulator(request: request)
+        let task = httpClient.execute(
+            request: request,
+            delegate: accumulator,
+            deadline: .now() + .seconds(25),
+            logger: logger
+        )
+        return try await withTaskCancellationHandler {
+            try await task.get()
+        } onCancel: {
+            task.cancel()
+        }
+    }
+
     private func handleResponse<Response: Decodable>(res: HTTPClient.Response, responseType: Response.Type = Response.self) throws -> Response {
         guard let body = res.body else {
             throw AuthorizedClientError(message: "no body")
