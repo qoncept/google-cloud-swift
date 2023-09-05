@@ -105,16 +105,16 @@ extension Date: BigQueryCodable {
     }
 }
 extension BigQueryEncodable where Self: RawRepresentable, RawValue: BigQueryEncodable {
-    static var parameterDataType: BigQueryDataType {
+    public static var parameterDataType: BigQueryDataType {
         RawValue.parameterDataType
     }
-    func parameterDataValue() -> String {
+    public func parameterDataValue() -> String {
         rawValue.parameterDataValue()
     }
 }
 
 extension BigQueryDecodable where Self: RawRepresentable, RawValue: BigQueryDecodable {
-    init(dataType: BigQueryDataType, dataValue: String) throws {
+    public init(dataType: BigQueryDataType, dataValue: String) throws {
         let raw = try RawValue(dataType: dataType, dataValue: dataValue)
         guard let result = Self.init(rawValue: raw) else {
             throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "\"\(raw)\" cannot convert to \(Self.self)"))
