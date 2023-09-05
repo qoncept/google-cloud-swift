@@ -1,4 +1,5 @@
 import Foundation
+import GoogleCloud
 import XCTest
 
 final class BigQueryCodableTest: XCTestCase {
@@ -21,3 +22,14 @@ final class BigQueryCodableTest: XCTestCase {
         )
     }
 }
+
+// auto conformance check
+fileprivate struct MyValueD: RawRepresentable {
+    var rawValue: String
+}
+extension MyValueD: BigQueryDecodable {}
+
+fileprivate struct MyValueE: RawRepresentable {
+    var rawValue: String
+}
+extension MyValueE: BigQueryEncodable {}

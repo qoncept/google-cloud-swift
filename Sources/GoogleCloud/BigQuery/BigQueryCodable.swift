@@ -122,9 +122,3 @@ extension BigQueryDecodable where Self: RawRepresentable, RawValue: BigQueryDeco
         self = result
     }
 }
-
-// for auto conformance check
-fileprivate struct MyString: RawRepresentable {
-    var rawValue: String
-}
-extension MyString: BigQueryCodable {}
