@@ -71,6 +71,7 @@ final class BigQueryTest: XCTestCase {
             var int: Int
             var float: Float
             var string: String
+            var optional: Int?
             var timestamp: Date
             var datetime: Date
         }
@@ -81,6 +82,7 @@ final class BigQueryTest: XCTestCase {
                 , 1 AS `int`
                 , 0.5 AS `float`
                 , 'hello' AS `string`
+                , null AS `optional`
                 , CURRENT_TIMESTAMP() AS `timestamp`
                 , CURRENT_DATETIME() AS `datetime`
         """, decoding: Row.self)
@@ -90,6 +92,7 @@ final class BigQueryTest: XCTestCase {
         XCTAssertEqual(rows[0].int, 1)
         XCTAssertEqual(rows[0].float, 0.5)
         XCTAssertEqual(rows[0].string, "hello")
+        XCTAssertEqual(rows[0].optional, nil)
         XCTAssertEqual(rows[0].timestamp.timeIntervalSince1970, now.timeIntervalSince1970, accuracy: 1)
         XCTAssertEqual(rows[0].datetime.timeIntervalSince1970, now.timeIntervalSince1970, accuracy: 1)
     }
