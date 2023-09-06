@@ -2,6 +2,7 @@ import AsyncHTTPClient
 import Foundation
 import GoogleCloudBase
 import NIOHTTP1
+import NIOPosix
 
 let bigqueryEmulatorHostEnvVar = "BIGQUERY_EMULATOR_HOST"
 private let defaultAPIEndpoint = URL(string: "https://bigquery.googleapis.com/")!
@@ -10,11 +11,13 @@ public struct BigQuery: Sendable {
     public var projectID: String
     private let credentialStore: CredentialStore
     private var authorizedClient: AuthorizedClient
+    public var threadPool: NIOThreadPool
 
     public init(
         projectID: String,
         credentialStore: CredentialStore,
-        client: AsyncHTTPClient.HTTPClient
+        client: AsyncHTTPClient.HTTPClient,
+        threadPool: NIOThreadPool = NIOThreadPool.singleton
     ) {
         self.projectID = projectID
 
@@ -33,6 +36,7 @@ public struct BigQuery: Sendable {
             credentialStore: credentialStore,
             httpClient: client
         )
+        self.threadPool = threadPool
     }
 
     public struct QueryOptions {
@@ -62,32 +66,44 @@ public struct BigQuery: Sendable {
             let task = Task {
                 let decoder = BigQueryRowDecoder()
                 do {
+                    @Sendable func asyncDecode(response: BigQueryQueryResponse) async throws {
+                        if response.rows.isEmpty { return }
+                        try await threadPool.runIfActive {
+                            let decoded = try response.rows.map {
+                                try decoder.decode(rowType, from: BigQueryQueryResponseView(response: response, row: $0))
+                            }
+                            if case .terminated = continuetion.yield(decoded) {
+                                throw CancellationError()
+                            }
+                        }
+                    }
+
                     let response = try await queryInternal(query, options: options)
+
                     var nextPageToken: String? = response.pageToken
+                    var nextRows: BigQueryQueryResponse = response
 
-                    let decoded = try response.rows.map {
-                        try decoder.decode(rowType, from: BigQueryQueryResponseView(response: response, row: $0))
-                    }
-                    if case .terminated = continuetion.yield(decoded) {
-                        nextPageToken = nil
-                    }
+                    repeat {
+                        let currentPageToken = nextPageToken
+                        let currentRows = nextRows
 
-                    while let pageToken = nextPageToken, !pageToken.isEmpty {
-                        let response = try await getQueryResult(
-                            jobReference: response.jobReference,
-                            pageToken: pageToken,
-                            options: options
-                        )
+                        if let pageToken = currentPageToken, !pageToken.isEmpty {
+                            async let fetch = try await getQueryResult(
+                                jobReference: response.jobReference,
+                                pageToken: pageToken,
+                                options: options
+                            )
+                            
+                            try await asyncDecode(response: currentRows)
 
-                        let decoded = try response.rows.map {
-                            try decoder.decode(rowType, from: BigQueryQueryResponseView(response: response, row: $0))
+                            let fetchResult = try await fetch
+                            (nextPageToken, nextRows) = (fetchResult.pageToken, fetchResult)
+                        } else {
+                            try await asyncDecode(response: currentRows)
+                            nextPageToken = nil
+                            nextRows.rows = []
                         }
-                        if case .terminated = continuetion.yield(decoded) {
-                            break
-                        }
-
-                        nextPageToken = response.pageToken
-                    }
+                    } while nextPageToken != nil || !nextRows.rows.isEmpty
 
                     continuetion.finish()
                 } catch {
