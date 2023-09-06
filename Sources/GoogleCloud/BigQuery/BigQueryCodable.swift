@@ -81,17 +81,8 @@ extension Date: BigQueryCodable {
         self.timeIntervalSince1970.parameterDataValue()
     }
 
-    private static let formatter = ThreadSpecificVariable<ISO8601DateFormatter>(value: {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions.remove(.withTimeZone)
-        return formatter
-    }())
-    private static let formatterMilli = ThreadSpecificVariable<ISO8601DateFormatter>(value: {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions.remove(.withTimeZone)
-        formatter.formatOptions.insert(.withFractionalSeconds)
-        return formatter
-    }())
+    private static let formatter = ThreadSpecificVariable<ISO8601DateFormatter>()
+    private static let formatterMilli = ThreadSpecificVariable<ISO8601DateFormatter>()
 
     public init(dataType: BigQueryDataType, dataValue: String) throws {
         switch dataType {
@@ -101,12 +92,35 @@ extension Date: BigQueryCodable {
             }
             self = .init(timeIntervalSince1970: t)
         case .datetime:
-            if let d = Self.formatter.currentValue.unsafelyUnwrapped.date(from: dataValue) {
-                self = d
-            } else if let d = Self.formatterMilli.currentValue.unsafelyUnwrapped.date(from: dataValue) {
+            let f: ISO8601DateFormatter
+            if let tl = Self.formatter.currentValue {
+                f = tl
+            } else {
+                let formatter = ISO8601DateFormatter()
+                formatter.formatOptions.remove(.withTimeZone)
+                Self.formatter.currentValue = formatter
+                f = formatter
+            }
+
+            if let d = f.date(from: dataValue) {
                 self = d
             } else {
-                throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "\"\(dataValue)\" is invalid format"))
+                let f: ISO8601DateFormatter
+                if let tl = Self.formatterMilli.currentValue {
+                    f = tl
+                } else {
+                    let formatter = ISO8601DateFormatter()
+                    formatter.formatOptions.remove(.withTimeZone)
+                    formatter.formatOptions.insert(.withFractionalSeconds)
+                    Self.formatterMilli.currentValue = formatter
+                    f = formatter
+                }
+
+                if let d = f.date(from: dataValue) {
+                    self = d
+                } else {
+                    throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "\"\(dataValue)\" is invalid format"))
+                }
             }
         default:
             throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "\"\(dataType)\" is unsupported"))
