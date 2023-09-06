@@ -1,4 +1,5 @@
 import Foundation
+import NIOPosix
 
 public protocol BigQueryEncodable {
     static var parameterDataType: BigQueryDataType { get }
@@ -80,6 +81,18 @@ extension Date: BigQueryCodable {
         self.timeIntervalSince1970.parameterDataValue()
     }
 
+    private static let formatter = ThreadSpecificVariable<ISO8601DateFormatter>(value: {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions.remove(.withTimeZone)
+        return formatter
+    }())
+    private static let formatterMilli = ThreadSpecificVariable<ISO8601DateFormatter>(value: {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions.remove(.withTimeZone)
+        formatter.formatOptions.insert(.withFractionalSeconds)
+        return formatter
+    }())
+
     public init(dataType: BigQueryDataType, dataValue: String) throws {
         switch dataType {
         case .timestamp:
@@ -88,17 +101,13 @@ extension Date: BigQueryCodable {
             }
             self = .init(timeIntervalSince1970: t)
         case .datetime:
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions.remove(.withTimeZone)
-            guard let d = formatter.date(from: dataValue) else {
-                formatter.formatOptions.insert(.withFractionalSeconds)
-                if let d = formatter.date(from: dataValue) {
-                    self = d
-                    return
-                }
+            if let d = Self.formatter.currentValue.unsafelyUnwrapped.date(from: dataValue) {
+                self = d
+            } else if let d = Self.formatterMilli.currentValue.unsafelyUnwrapped.date(from: dataValue) {
+                self = d
+            } else {
                 throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "\"\(dataValue)\" is invalid format"))
             }
-            self = d
         default:
             throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "\"\(dataType)\" is unsupported"))
         }
