@@ -1,4 +1,5 @@
 import Foundation
+import NIOPosix
 
 public protocol BigQueryEncodable {
     static var parameterDataType: BigQueryDataType { get }
@@ -80,6 +81,9 @@ extension Date: BigQueryCodable {
         self.timeIntervalSince1970.parameterDataValue()
     }
 
+    private static let formatter = ThreadSpecificVariable<ISO8601DateFormatter>()
+    private static let formatterMilli = ThreadSpecificVariable<ISO8601DateFormatter>()
+
     public init(dataType: BigQueryDataType, dataValue: String) throws {
         switch dataType {
         case .timestamp:
@@ -88,17 +92,36 @@ extension Date: BigQueryCodable {
             }
             self = .init(timeIntervalSince1970: t)
         case .datetime:
-            let formatter = ISO8601DateFormatter()
-            formatter.formatOptions.remove(.withTimeZone)
-            guard let d = formatter.date(from: dataValue) else {
-                formatter.formatOptions.insert(.withFractionalSeconds)
-                if let d = formatter.date(from: dataValue) {
-                    self = d
-                    return
-                }
-                throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "\"\(dataValue)\" is invalid format"))
+            let f: ISO8601DateFormatter
+            if let tl = Self.formatter.currentValue {
+                f = tl
+            } else {
+                let formatter = ISO8601DateFormatter()
+                formatter.formatOptions.remove(.withTimeZone)
+                Self.formatter.currentValue = formatter
+                f = formatter
             }
-            self = d
+
+            if let d = f.date(from: dataValue) {
+                self = d
+            } else {
+                let f: ISO8601DateFormatter
+                if let tl = Self.formatterMilli.currentValue {
+                    f = tl
+                } else {
+                    let formatter = ISO8601DateFormatter()
+                    formatter.formatOptions.remove(.withTimeZone)
+                    formatter.formatOptions.insert(.withFractionalSeconds)
+                    Self.formatterMilli.currentValue = formatter
+                    f = formatter
+                }
+
+                if let d = f.date(from: dataValue) {
+                    self = d
+                } else {
+                    throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "\"\(dataValue)\" is invalid format"))
+                }
+            }
         default:
             throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "\"\(dataType)\" is unsupported"))
         }
