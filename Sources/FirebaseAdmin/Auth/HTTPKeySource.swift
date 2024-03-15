@@ -37,20 +37,15 @@ actor HTTPKeySource {
         self.clock = clock
     }
 
-    private var cachedKeys: JWTSigners?
+    private var cachedKeys: JWTKeyCollection?
     private var expiryTime: Date = .init(timeIntervalSince1970: 0)
     private var refreshingTask: Task<Void, any Error>?
 
-    func publicKeys() async throws -> JWTSigners {
+    func publicKeys() async throws -> JWTKeyCollection {
         if cachedKeys == nil || hasExpired {
             try await refreshKeys()
         }
         return cachedKeys!
-    }
-
-    func withPublicKeys<T>(_ run: @Sendable (JWTSigners) throws -> T) async throws -> T {
-        let signers = try await publicKeys()
-        return try run(signers)
     }
 
     private var hasExpired: Bool {
@@ -76,10 +71,12 @@ actor HTTPKeySource {
                 throw HTTPKeySourceError.invalidBody
             }
             
-            let newSigners = JWTSigners()
+            let newSigners = JWTKeyCollection()
             for (id, pem) in bodyDictionary {
                 //            print("id:", id, "pem:", pem)
-                newSigners.use(.rs256(key: try .certificate(pem: pem)), kid: JWKIdentifier(string: id))
+                await newSigners.addRS256(
+                    key: try Insecure.RSA.PublicKey(certificatePEM: pem), kid: JWKIdentifier(string: id)
+                )
             }
             cachedKeys = newSigners
         }

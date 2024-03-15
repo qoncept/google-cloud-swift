@@ -115,7 +115,7 @@ public struct Auth {
     }
 
     public func isExpired(_ idToken: String) throws -> Bool {
-        let unverifiedToken = try JWTSigners().unverified(idToken, as: FirebaseAuthToken.self)
+        let unverifiedToken = try DefaultJWTParser().parse([UInt8](idToken.utf8), as: FirebaseAuthToken.self).payload
         do {
             try unverifiedToken.expires.verifyNotExpired()
             return false
@@ -125,9 +125,7 @@ public struct Auth {
     }
 
     public func verifyIdToken(_ idToken: String) async throws -> FirebaseAuthToken {
-        let token = try await keySource.withPublicKeys { signers in
-            try signers.verify(idToken, as: FirebaseAuthToken.self)
-        }
+        let token = try await keySource.publicKeys().verify(idToken, as: FirebaseAuthToken.self)
         try token.audience.verifyIntendedAudience(includes: projectID)
         return token
     }
