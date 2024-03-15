@@ -17,7 +17,8 @@ final class HTTPKeySourceTest: XCTestCase {
         let source = makeKeySource()
 
         let keys = try await source.publicKeys()
-        XCTAssertNotNil(keys.get())
+        let key = try await keys.getKey()
+        XCTAssertNotNil(key)
     }
 
     func testRefreshKeys() async throws {

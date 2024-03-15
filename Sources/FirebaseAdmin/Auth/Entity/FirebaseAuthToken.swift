@@ -90,26 +90,26 @@ public struct FirebaseAuthToken: JWTPayload, Sendable {
     }
 
     // INFO: https://firebase.google.com/docs/auth/admin/verify-id-tokens?hl=ja#verify_id_tokens_using_a_third-party_jwt_library
-    public func verify(using signer: JWTSigner) throws {
+    public func verify(using algorithm: any JWTAlgorithm) async throws {
         guard let projectID = audience.value.first else {
-            throw JWTError.claimVerificationFailure(name: "aud", reason: "Empty audience")
+            throw JWTError.claimVerificationFailure(failedClaim: audience, reason: "Empty audience")
         }
 
         guard issuer.value == "https://securetoken.google.com/\(projectID)" else {
-            throw JWTError.claimVerificationFailure(name: "iss", reason: "Token not provided by Firebase project: \(projectID)")
+            throw JWTError.claimVerificationFailure(failedClaim: issuer, reason: "Token not provided by Firebase project: \(projectID)")
         }
 
         guard !subject.value.isEmpty else {
-            throw JWTError.claimVerificationFailure(name: "sub", reason: "Empty subject")
+            throw JWTError.claimVerificationFailure(failedClaim: subject, reason: "Empty subject")
         }
 
         let now = Date()
         try expires.verifyNotExpired(currentDate: now)
         guard issuedAt.value <= now.addingTimeInterval(60) else {
-            throw JWTError.claimVerificationFailure(name: "iat", reason: "issued at future")
+            throw JWTError.claimVerificationFailure(failedClaim: issuedAt, reason: "issued at future")
         }
         guard authTime.value <= now.addingTimeInterval(60) else {
-            throw JWTError.claimVerificationFailure(name: "auth_time", reason: "authTime at future")
+            throw JWTError.claimVerificationFailure(failedClaim: authTime, reason: "authTime at future")
         }
     }
 }

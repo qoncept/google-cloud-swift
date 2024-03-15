@@ -10,12 +10,30 @@
       }
     },
     {
+      "identity" : "bigint",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/attaswift/BigInt.git",
+      "state" : {
+        "revision" : "0ed110f7555c34ff468e72e1686e59721f2b0da6",
+        "version" : "5.3.0"
+      }
+    },
+    {
       "identity" : "jwt-kit",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/vapor/jwt-kit.git",
       "state" : {
-        "revision" : "9e929d925434b91857661bcd455d1bd53f00bf22",
-        "version" : "4.13.0"
+        "revision" : "12391f9c58b364b32ac47a18d5b82732beadf01c",
+        "version" : "5.0.0-beta.1"
+      }
+    },
+    {
+      "identity" : "swift-asn1",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-asn1.git",
+      "state" : {
+        "revision" : "c7e239b5c1492ffc3ebd7fbcc7a92548ce4e78f0",
+        "version" : "1.1.0"
       }
     },
     {
@@ -25,6 +43,15 @@
       "state" : {
         "revision" : "6c89474e62719ddcc1e9614989fff2f68208fe10",
         "version" : "1.1.0"
+      }
+    },
+    {
+      "identity" : "swift-certificates",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-certificates.git",
+      "state" : {
+        "revision" : "bc566f88842b3b8001717326d935c2d113af5741",
+        "version" : "1.2.0"
       }
     },
     {
@@ -41,8 +68,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-crypto.git",
       "state" : {
-        "revision" : "d9825fa541df64b1a7b182178d61b9a82730d01f",
-        "version" : "2.1.0"
+        "revision" : "f0525da24dc3c6cbb2b6b338b65042bc91cbc4bb",
+        "version" : "3.3.0"
       }
     },
     {
