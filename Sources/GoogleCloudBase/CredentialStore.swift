@@ -3,18 +3,25 @@ import Foundation
 private let tokenExpiryThreshold: Duration = .seconds(5 * 60)
 
 public actor CredentialStore {
-    public let credential: any Credential
-    nonisolated public var compilersafeCredential: any Credential {
-        // 外のモジュールが「actorに生えたSendableなlet変数」をawaitするとコンパイラがクラッシュするので、その回避
-        credential
-    }
-
+    private let credentialTask: Task<any Credential, any Error>
     private var refreshingTask: Task<String, any Error>?
     private var storage: any DurationalCacheProtocol<String>
 
-    public init(credential: any Credential, clock: some Clock<Duration> = .continuous) {
-        self.credential = credential
+    public init(
+        context: CredentialFactory.Context,
+        credentialFactory: CredentialFactory,
+        clock: some Clock<Duration> = .continuous
+    ) {
+        self.credentialTask = Task {
+            try await credentialFactory.makeCredential(context: context)
+        }
         self.storage = DurationalCache(clock: clock)
+    }
+
+    public var credential: any Credential {
+        get async throws {
+            try await credentialTask.value
+        }
     }
 
     public func accessToken(forceRefresh: Bool = false) async throws -> String {
@@ -34,7 +41,7 @@ public actor CredentialStore {
         }
 
         let task = Task<String, any Error> {
-            let tokenResponse = try await credential.getAccessToken()
+            let tokenResponse = try await credentialTask.value.getAccessToken()
             storage.store(value: tokenResponse.accessToken, expiresIn: .seconds(tokenResponse.exipresIn) - tokenExpiryThreshold)
             return tokenResponse.accessToken
         }

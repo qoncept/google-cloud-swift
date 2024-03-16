@@ -34,8 +34,8 @@ public struct Auth {
         return URL(string: "http://\(host)/emulator/v1")
     }
 
-    private static func projectID(from credentialStore: CredentialStore) -> String? {
-        guard let richCredential = credentialStore.compilersafeCredential as? any RichCredential else {
+    private static func projectID(from credentialStore: CredentialStore) async throws -> String? {
+        guard let richCredential = try await credentialStore.credential as? any RichCredential else {
             return nil
         }
         return richCredential.projectID
