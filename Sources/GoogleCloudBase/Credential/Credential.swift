@@ -109,13 +109,11 @@ struct CredentialErrorFrame: Decodable, Error, CustomStringConvertible, Localize
 extension Credential {
     internal static func requestAccessToken(
         httpClient: AsyncHTTPClient.HTTPClient,
-        request: HTTPClient.Request
+        request: HTTPClientRequest
     ) async throws -> GoogleOAuthAccessToken {
-        let res = try await httpClient.execute(request: request).get()
-        guard let body = res.body else {
-            throw CredentialError(message: "Missing payload")
-        }
-
+        let res = try await httpClient.execute(request, timeout: .seconds(10))
+        let body = try await res.body.collect(upTo: .max)
+        
         if 400..<600 ~= res.status.code {
             let errorFrame = try JSONDecoder().decode(CredentialErrorFrame.self, from: body)
             throw CredentialError(message: errorFrame.description)
@@ -127,24 +125,20 @@ extension Credential {
 
     internal static func requestString(
         httpClient: AsyncHTTPClient.HTTPClient,
-        request: HTTPClient.Request
-    ) -> EventLoopFuture<String> {
-        return httpClient.execute(request: request)
-            .flatMapThrowing { res in
-                guard let body = res.body else {
-                    throw CredentialError(message: "Missing payload")
-                }
+        request: HTTPClientRequest
+    ) async throws -> String {
+        let res = try await httpClient.execute(request, timeout: .seconds(10))
+        let body = try await res.body.collect(upTo: .max)
 
-                if 400..<600 ~= res.status.code {
-                    let errorFrame = try JSONDecoder().decode(CredentialErrorFrame.self, from: body)
-                    throw CredentialError(message: errorFrame.description)
-                }
+        if 400..<600 ~= res.status.code {
+            let errorFrame = try JSONDecoder().decode(CredentialErrorFrame.self, from: body)
+            throw CredentialError(message: errorFrame.description)
+        }
 
-                guard let data = body.getData(at: body.readerIndex, length: body.readableBytes),
-                      let string = String(data: data, encoding: .utf8) else {
-                          throw CredentialError(message: "body cannot decode as utf8")
-                      }
-                return string
-            }
+        guard let data = body.getData(at: body.readerIndex, length: body.readableBytes),
+              let string = String(data: data, encoding: .utf8) else {
+            throw CredentialError(message: "body cannot decode as utf8")
+        }
+        return string
     }
 }
