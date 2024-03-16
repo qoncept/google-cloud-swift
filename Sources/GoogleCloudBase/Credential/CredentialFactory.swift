@@ -4,14 +4,14 @@ import Logging
 import NIOConcurrencyHelpers
 import NIOCore
 
-public struct CredentialFactory {
+public struct CredentialFactory: Sendable {
     public struct Context {
         public var httpClient: HTTPClient
         public var logger: Logger
     }
 
-    private var cb: (Context) async throws -> any Credential
-    init(cb: @escaping (Context) async throws -> any Credential) {
+    private var cb: @Sendable (Context) async throws -> any Credential
+    init(cb: @Sendable @escaping (Context) async throws -> any Credential) {
         self.cb = cb
     }
     init(next: @escaping (Context) throws -> CredentialFactory) {
@@ -35,7 +35,7 @@ extension CredentialFactory {
 #endif
     }
 
-    public static func custom(_ factory: @escaping (Context) async throws -> any Credential) -> CredentialFactory {
+    public static func custom(_ factory: @Sendable @escaping (Context) async throws -> any Credential) -> CredentialFactory {
         CredentialFactory(cb: factory)
     }
 
