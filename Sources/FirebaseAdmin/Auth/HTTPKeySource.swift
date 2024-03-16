@@ -26,30 +26,26 @@ enum HTTPKeySourceError: Error, LocalizedError {
 
 actor HTTPKeySource {
     private let client: HTTPClient
-    private let clock: any Clock
     private var willRefreshKeys: (() -> ())?
     func setWillRefreshKeys(_ c: (() -> ())?) {
         willRefreshKeys = c
     }
 
-    init(client: HTTPClient, clock: any Clock = .default) {
+    private var storage: any DurationalCacheProtocol<JWTKeyCollection>
+
+    init(client: HTTPClient, clock: some Clock<Duration> = .continuous) {
         self.client = client
-        self.clock = clock
+        self.storage = DurationalCache(clock: clock)
     }
 
-    private var cachedKeys: JWTKeyCollection?
-    private var expiryTime: Date = .init(timeIntervalSince1970: 0)
     private var refreshingTask: Task<Void, any Error>?
 
     func publicKeys() async throws -> JWTKeyCollection {
-        if cachedKeys == nil || hasExpired {
-            try await refreshKeys()
+        if let keys = storage.cachedValue {
+            return keys
         }
-        return cachedKeys!
-    }
-
-    private var hasExpired: Bool {
-        expiryTime < clock.now()
+        try await refreshKeys()
+        return storage.cachedValue!
     }
 
     private func refreshKeys() async throws {
@@ -60,9 +56,6 @@ actor HTTPKeySource {
         let task = Task {
             willRefreshKeys?()
             let res = try await client.execute(url: publicKeysURL).map { UnsafeTransfer($0) }.get().wrappedValue
-            
-            let maxAge = try Self.findMaxAge(res: res)
-            expiryTime = clock.now().addingTimeInterval(maxAge)
 
             guard let body = res.body,
                   let bodyDictionary = try? JSONDecoder().decode([String: String].self, from: body),
@@ -70,7 +63,7 @@ actor HTTPKeySource {
             else {
                 throw HTTPKeySourceError.invalidBody
             }
-            
+
             let newSigners = JWTKeyCollection()
             for (id, pem) in bodyDictionary {
                 //            print("id:", id, "pem:", pem)
@@ -78,7 +71,9 @@ actor HTTPKeySource {
                     key: try Insecure.RSA.PublicKey(certificatePEM: pem), kid: JWKIdentifier(string: id)
                 )
             }
-            cachedKeys = newSigners
+
+            let maxAge = try Self.findMaxAge(res: res)
+            storage.store(value: newSigners, expiresIn: maxAge)
         }
 
         refreshingTask = task
@@ -87,7 +82,7 @@ actor HTTPKeySource {
         return try await task.value
     }
 
-    private static func findMaxAge(res: HTTPClient.Response) throws -> TimeInterval {
+    private static func findMaxAge(res: HTTPClient.Response) throws -> Duration {
         guard let cacheControl = res.headers.first(name: "cache-control") else {
             throw HTTPKeySourceError.noCacheControl
         }
@@ -97,8 +92,8 @@ actor HTTPKeySource {
             if value.hasPrefix("max-age="), let eqIndex = value.firstIndex(of: "=") {
                 let secondsString = value.suffix(from: value.index(after: eqIndex))
 //                print("secondsString", secondsString)
-                if let duration = TimeInterval(secondsString) {
-                    return duration
+                if let duration = Double(secondsString) {
+                    return .seconds(duration)
                 }
             }
         }

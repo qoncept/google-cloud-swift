@@ -9,51 +9,19 @@ public actor CredentialStore {
         credential
     }
 
-    protocol StorageProtocol {
-        mutating func store(result: GoogleOAuthAccessToken)
-        var cachedAccessToken: String? { get }
-    }
-
-    private struct Storage<ClockType: Clock<Duration>>: StorageProtocol {
-        var clock: ClockType
-
-        struct OAuth2Token {
-            var accessToken: String
-            var expiry: ClockType.Instant
-        }
-        var cachedToken: OAuth2Token?
-
-        mutating func store(result: GoogleOAuthAccessToken) {
-            cachedToken = .init(
-                accessToken: result.accessToken,
-                expiry: clock.now.advanced(by: .seconds(result.exipresIn))
-            )
-        }
-
-        var cachedAccessToken: String? {
-            guard let cachedToken else {
-                return nil
-            }
-            let remainingTime = cachedToken.expiry.duration(to: clock.now)
-            if remainingTime < tokenExpiryThreshold {
-                return nil
-            }
-            return cachedToken.accessToken
-        }
-    }
     private var refreshingTask: Task<String, any Error>?
-    private var storage: any StorageProtocol
+    private var storage: any DurationalCacheProtocol<String>
 
     public init(credential: any Credential, clock: some Clock<Duration> = .continuous) {
         self.credential = credential
-        self.storage = Storage(clock: clock)
+        self.storage = DurationalCache(clock: clock)
     }
 
     public func accessToken(forceRefresh: Bool = false) async throws -> String {
         if forceRefresh {
             return try await refreshToken()
         }
-        guard let token = storage.cachedAccessToken else {
+        guard let token = storage.cachedValue else {
             return try await refreshToken()
         }
 
@@ -67,7 +35,7 @@ public actor CredentialStore {
 
         let task = Task<String, any Error> {
             let tokenResponse = try await credential.getAccessToken()
-            storage.store(result: tokenResponse)
+            storage.store(value: tokenResponse.accessToken, expiresIn: .seconds(tokenResponse.exipresIn) - tokenExpiryThreshold)
             return tokenResponse.accessToken
         }
         refreshingTask = task

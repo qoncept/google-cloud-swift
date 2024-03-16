@@ -10,8 +10,6 @@ public enum GCPClientError: Error {
 }
 
 public struct GCPClient: Sendable {
-    internal var credentialFactory: CredentialFactory
-
     public let httpClient: HTTPClient
     public var clientLogger: Logger
     internal let isShutdown = ManagedAtomic<Bool>(false)
@@ -63,12 +61,12 @@ public struct GCPClient: Sendable {
             )
         }
 
-        let credentialProvider = credentialProviderFactory.createProvider(context: .init(
-            httpClient: httpClient,
-            logger: clientLogger,
-            options: options
-        ))
-        self.credentialProvider = credentialProvider
+//        let credentialProvider = credentialProviderFactory.createProvider(context: .init(
+//            httpClient: httpClient,
+//            logger: clientLogger,
+//            options: options
+//        ))
+//        self.credentialProvider = credentialProvider
         self.clientLogger = clientLogger
         self.options = options
     }
