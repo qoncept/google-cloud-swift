@@ -94,6 +94,14 @@ package struct AuthorizedClient: Sendable {
             "X-Client-Version": "Swift/Admin/\(sdkVersion)",
             "Authorization": "Bearer \(try await token())",
         ])
+        if gcpClient.httpClientCompressionEnabled {
+            if !headers.contains(name: "Accept-Encoding") {
+                headers.add(name: "Accept-Encoding", value: "gzip")
+            }
+            if !headers.contains(name: "User-Agent") {
+                headers.add(name: "User-Agent", value: "google-cloud-swift/\(sdkVersion) (gzip)")
+            }
+        }
         return headers
     }
 }

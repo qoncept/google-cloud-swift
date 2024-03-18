@@ -13,7 +13,7 @@ public struct GCPClient: Sendable {
     public static let loggingDisabled = Logger(label: "GCP-no-op-logger", factory: { _ in SwiftLogNoOpLogHandler() })
 
     public let httpClient: HTTPClient
-    private let httpClientCompressionEnabled: Bool
+    package let httpClientCompressionEnabled: Bool
     internal var clientLogger: Logger
     internal let isShutdown = ManagedAtomic<Bool>(false)
 
