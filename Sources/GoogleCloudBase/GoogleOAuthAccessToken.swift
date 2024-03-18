@@ -1,8 +1,6 @@
-import Foundation
-
 public struct GoogleOAuthAccessToken: Decodable, Sendable {
     public var accessToken: String
-    public var exipresIn: TimeInterval
+    public var exipresIn: Double // seconds
 
     enum CodingKeys: String, CodingKey {
         case accessToken = "access_token"

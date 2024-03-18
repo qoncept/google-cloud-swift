@@ -1,60 +1,40 @@
 import Foundation
 
-private let tokenExpiryThreshold: TimeInterval = 5 * 60
-
-struct OAuth2Token {
-    var accessToken: String
-    var expiry: Date
-}
+private let tokenExpiryThreshold: Duration = .seconds(5 * 60)
 
 public actor CredentialStore {
-    public let credential: any Credential
-    nonisolated public var compilersafeCredential: any Credential {
-        // 外のモジュールが「actorに生えたSendableなlet変数」をawaitするとコンパイラがクラッシュするので、その回避
-        credential
-    }
-    private let clock: any Clock
-    private var cachedToken: OAuth2Token?
+    nonisolated public let credential: any Credential
+    private var refreshingTask: Task<String, any Error>?
+    private var storage: any DurationalCacheProtocol<String>
 
-    private var refreshingTask: Task<OAuth2Token, any Error>?
-
-    public init(credential: any Credential, clock: any Clock = .default) {
+    public init(
+        credential: any Credential,
+        clock: some Clock<Duration> = .continuous
+    ) {
         self.credential = credential
-        self.clock = clock
+        self.storage = DurationalCache(clock: clock)
     }
 
     public func accessToken(forceRefresh: Bool = false) async throws -> String {
-        if forceRefresh || shouldRefresh() {
-            return try await refreshToken().accessToken
+        if forceRefresh {
+            return try await refreshToken()
         }
-        guard let token = cachedToken else {
-            return try await refreshToken().accessToken
+        guard let token = storage.cachedValue else {
+            return try await refreshToken()
         }
 
-        return token.accessToken
+        return token
     }
 
-    private func shouldRefresh() -> Bool {
-        guard let cachedToken = cachedToken else {
-            return true
-        }
-        return cachedToken.expiry.timeIntervalSince(clock.now()) <= tokenExpiryThreshold
-    }
-
-    private func refreshToken() async throws -> OAuth2Token {
-        if let refreshingTask {
-            return try await refreshingTask.value
+    private func refreshToken() async throws -> String {
+        if let task = refreshingTask {
+            return try await task.value
         }
 
-        let task = Task<OAuth2Token, any Error> {
-            let rawTokenResponse = try await credential.getAccessToken()
-            let newToken = OAuth2Token(
-                accessToken: rawTokenResponse.accessToken,
-                expiry: clock.now() + rawTokenResponse.exipresIn
-            )
-
-            cachedToken = newToken
-            return newToken
+        let task = Task<String, any Error> {
+            let tokenResponse = try await credential.getAccessToken()
+            storage.store(value: tokenResponse.accessToken, expiresIn: .seconds(tokenResponse.exipresIn) - tokenExpiryThreshold)
+            return tokenResponse.accessToken
         }
         refreshingTask = task
         defer { refreshingTask = nil }

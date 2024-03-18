@@ -30,9 +30,8 @@ struct ServiceAccountCredential: RichCredential, Sendable {
     let clientEmail: String
 
     private let httpClient: AsyncHTTPClient.HTTPClient
-    private let clock: any Clock
 
-    init(credentialsFileData: Data, httpClient: AsyncHTTPClient.HTTPClient, clock: any Clock = .default) throws {
+    init(credentialsFileData: Data, httpClient: AsyncHTTPClient.HTTPClient) throws {
         let serviceAccount = try JSONDecoder().decode(ServiceAccount.self, from: credentialsFileData)
         projectID = serviceAccount.projectID
         privateKey = try _RSA.Signing.PrivateKey(pemRepresentation: serviceAccount.privateKey)
@@ -43,21 +42,18 @@ struct ServiceAccountCredential: RichCredential, Sendable {
         clientEmail = serviceAccount.clientEmail
 
         self.httpClient = httpClient
-        self.clock = clock
     }
 
     func getAccessToken() async throws -> GoogleOAuthAccessToken {
         let jwt = try await makeAuthJWT()
         let postData = "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=\(jwt)"
 
-        let req = try HTTPClient.Request(
-            url: URL(string: "https://\(googleAuthTokenHost)/\(googleAuthTokenPath)")!,
-            method: .POST,
-            headers: HTTPHeaders([
-                ("Content-Type", "application/x-www-form-urlencoded"),
-            ]),
-            body: .string(postData)
-        )
+        var req = HTTPClientRequest(url: "https://\(googleAuthTokenHost)/\(googleAuthTokenPath)")
+        req.method = .POST
+        req.headers = [
+            "Content-Type": "application/x-www-form-urlencoded",
+        ]
+        req.body = .bytes(.init(string: postData))
 
         return try await Self.requestAccessToken(httpClient: httpClient, request: req)
     }
@@ -71,7 +67,7 @@ struct ServiceAccountCredential: RichCredential, Sendable {
             "https://www.googleapis.com/auth/userinfo.email",
         ].joined(separator: " ")
 
-        let now = clock.now()
+        let now = Date()
         let jwtPayload = AuthPayload(
             aud: .init(value: googleTokenAudience),
             exp: .init(value: now + 60 * 60),

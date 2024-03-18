@@ -12,10 +12,10 @@ struct ComputeEngineCredential: RichCredential, Sendable {
     let clientEmail: String
     let projectID: String
 
-    init(httpClient: AsyncHTTPClient.HTTPClient) throws {
-        self.httpClient = httpClient
-        clientEmail = try Self.requestString(httpClient: httpClient, request: Self.buildRequest(path: googleMetadataServiceEmailPath)).wait()
-        projectID = try Self.requestString(httpClient: httpClient, request: Self.buildRequest(path: googleMetadataProjectIDPath)).wait()
+    static func makeFromMetadata(httpClient: AsyncHTTPClient.HTTPClient) async throws -> ComputeEngineCredential {
+        let clientEmail = try await Self.requestString(httpClient: httpClient, request: Self.buildRequest(path: googleMetadataServiceEmailPath))
+        let projectID = try await Self.requestString(httpClient: httpClient, request: Self.buildRequest(path: googleMetadataProjectIDPath))
+        return .init(httpClient: httpClient, clientEmail: clientEmail, projectID: projectID)
     }
 
     func getAccessToken() async throws -> GoogleOAuthAccessToken {
@@ -63,14 +63,13 @@ struct ComputeEngineCredential: RichCredential, Sendable {
         return blob
     }
 
-    private static func buildRequest(path: String) throws -> HTTPClient.Request {
-        try HTTPClient.Request(
-            url: "http://\(googleMetadataServiceHost)\(path)",
-            method: .GET,
-            headers: [
-                "Metadata-Flavor": "Google",
-            ]
-        )
+    private static func buildRequest(path: String) throws -> HTTPClientRequest {
+        var req = HTTPClientRequest(url: "http://\(googleMetadataServiceHost)\(path)")
+        req.method = .GET
+        req.headers = [
+            "Metadata-Flavor": "Google",
+        ]
+        return req
     }
 }
 

@@ -36,14 +36,12 @@ struct RefreshTokenCredential: Credential, Sendable {
         ]
         let bodyString = postProperties.map { "\($0.0)=\($0.1)" }.joined(separator: "&")
 
-        let req = try HTTPClient.Request(
-            url: refreshTokenEndpoint,
-            method: .POST,
-            headers: HTTPHeaders([
-                ("Content-Type", "application/x-www-form-urlencoded"),
-            ]),
-            body: .string(bodyString)
-        )
+        var req = HTTPClientRequest(url: refreshTokenEndpoint)
+        req.method = .POST
+        req.headers = [
+            "Content-Type": "application/x-www-form-urlencoded",
+        ]
+        req.body = .bytes(.init(string: bodyString))
 
         return try await Self.requestAccessToken(httpClient: httpClient, request: req)
     }

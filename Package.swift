@@ -1,4 +1,4 @@
-// swift-tools-version:5.8
+// swift-tools-version:5.10
 import PackageDescription
 
 func swiftSettings() -> [SwiftSetting] {
@@ -21,7 +21,7 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/apple/swift-crypto.git", "1.0.0" ..< "4.0.0"),
         .package(url: "https://github.com/swift-server/async-http-client.git", from: "1.19.0"),
-        .package(url: "https://github.com/vapor/jwt-kit.git", exact: "5.0.0-beta.1"),
+        .package(url: "https://github.com/vapor/jwt-kit.git", exact: "5.0.0-beta.2"),
     ],
     targets: [
         .target(

@@ -56,7 +56,7 @@ public struct TasksQueue: Sendable {
 
         var request = request
         if request.oidcToken == nil && request.oauthToken == nil {
-            if let serviceAccountEmail = (credentialStore.compilersafeCredential as? (any RichCredential))?.clientEmail {
+            if let serviceAccountEmail = (credentialStore.credential as? (any RichCredential))?.clientEmail {
                 request.oidcToken = .init(serviceAccountEmail: serviceAccountEmail, audience: nil)
             }
         }
