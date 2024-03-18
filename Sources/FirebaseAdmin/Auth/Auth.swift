@@ -51,7 +51,9 @@ public struct Auth {
     ) throws {
         var credential = client.credential
         var baseURL: URL
-        let projectID: String? = paramProjectID ?? Self.projectID(from: credential)
+        guard let projectID = paramProjectID ?? Self.projectID(from: credential) else {
+            throw AuthError(message: "projectID must be provided if the credential doesn't have it.")
+        }
 
         if let paramBaseURL {
             baseURL = paramBaseURL
@@ -70,25 +72,6 @@ public struct Auth {
             httpClient: client.httpClient
         )
 
-        try self.init(
-            authorizedClient: authorizedClient,
-            projectID: projectID
-        )
-    }
-
-    public init(
-        authorizedClient: AuthorizedClient,
-        projectID paramProjectID: String? = nil
-    ) throws {
-        let projectID: String
-        if let paramProjectID {
-            projectID = paramProjectID
-        } else if let id = Self.projectID(from: authorizedClient.credential) {
-            projectID = id
-        } else {
-            throw AuthError(message: "projectID must be provided if the credential doesn't have it.")
-        }
-
         baseClient = BaseClient(
             authorizedClient: authorizedClient,
             projectID: projectID,
@@ -96,8 +79,6 @@ public struct Auth {
         )
         keySource = HTTPKeySource(client: authorizedClient.httpClient)
     }
-
-    public var authorizedClient: AuthorizedClient { baseClient.authorizedClient }
     
     public var projectID: String { baseClient.projectID }
 

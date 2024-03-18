@@ -3,7 +3,9 @@ import NIOPosix
 import XCTest
 
 final class BigQueryTest: XCTestCase {
-    private static let client = AsyncHTTPClient.HTTPClient(eventLoopGroupProvider: .singleton)
+    private static let client = try! GCPClient(credentialFactory: .custom { _ in
+        MockCredential()
+    })
 
     override class func setUp() {
         super.setUp()
@@ -27,9 +29,8 @@ final class BigQueryTest: XCTestCase {
 
     private func makeBigQuery() -> BigQuery {
         BigQuery(
-            projectID: "testing-project-id",
-            credential: MockCredential(),
-            client: Self.client
+            client: Self.client,
+            projectID: "testing-project-id"
         )
     }
 

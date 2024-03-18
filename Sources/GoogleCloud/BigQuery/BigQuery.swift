@@ -13,14 +13,13 @@ public struct BigQuery: Sendable {
     public var threadPool: NIOThreadPool
 
     public init(
+        client: GCPClient,
         projectID: String,
-        credential: any Credential,
-        client: AsyncHTTPClient.HTTPClient,
         threadPool: NIOThreadPool = NIOThreadPool.singleton
     ) {
         self.projectID = projectID
 
-        var credential = credential
+        var credential = client.credential
         let baseURL: URL
         if let emulatorHost = ProcessInfo.processInfo.environment[bigqueryEmulatorHostEnvVar] {
             baseURL = URL(string: "http://\(emulatorHost)/")!
@@ -32,7 +31,7 @@ public struct BigQuery: Sendable {
         authorizedClient = .init(
             baseURL: baseURL,
             credential: credential,
-            httpClient: client
+            httpClient: client.httpClient
         )
         self.threadPool = threadPool
     }

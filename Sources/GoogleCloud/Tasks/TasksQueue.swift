@@ -11,30 +11,24 @@ public struct TasksQueue: Sendable {
     private let parent: String
 
     public init(
+        client: GCPClient,
         projectID: String,
         location: String,
-        name: String,
-        credential: any Credential,
-        client: AsyncHTTPClient.HTTPClient
+        name: String
     ) {
         self.init(
-            id: "projects/\(projectID)/locations/\(location)/queues/\(name)",
-            credential: credential,
-            client: client
+            client: client,
+            id: "projects/\(projectID)/locations/\(location)/queues/\(name)"
         )
     }
 
-    public init(
-        id: String,
-        credential: any Credential,
-        client: AsyncHTTPClient.HTTPClient
-    ) {
+    public init(client: GCPClient, id: String) {
         parent = id.addingSlashSuffix.choppingSlashPrefix
-        self.credential = credential
+        self.credential = client.credential
         authorizedClient = .init(
             baseURL: defaultAPIEndpoint,
             credential: credential,
-            httpClient: client
+            httpClient: client.httpClient
         )
     }
 

@@ -6,7 +6,7 @@ public struct Bucket: Sendable {
     public let bucketName: String
     private let authorizedClient: AuthorizedClient
 
-    init(name: String, authorizedClient: AuthorizedClient) {
+    internal init(name: String, authorizedClient: AuthorizedClient) {
         self.bucketName = name
         self.authorizedClient = authorizedClient
     }
