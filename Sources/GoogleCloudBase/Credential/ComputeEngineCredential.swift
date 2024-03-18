@@ -1,6 +1,6 @@
+import AsyncHTTPClient
 import Foundation
 import NIOHTTP1
-import AsyncHTTPClient
 
 private let googleMetadataServiceHost = "metadata.google.internal"
 private let googleMetadataServiceTokenPath = "/computeMetadata/v1/instance/service-accounts/default/token"
@@ -8,9 +8,10 @@ private let googleMetadataServiceEmailPath = "/computeMetadata/v1/instance/servi
 private let googleMetadataProjectIDPath = "/computeMetadata/v1/project/project-id"
 
 struct ComputeEngineCredential: RichCredential, Sendable {
-    private let httpClient: AsyncHTTPClient.HTTPClient
-    let clientEmail: String
-    let projectID: String
+    var httpClient: AsyncHTTPClient.HTTPClient
+    var clientEmail: String
+    var projectID: String
+    var accessToken: AutoRotatingValue<GoogleOAuthAccessToken>
 
     static func makeFromMetadata(httpClient: AsyncHTTPClient.HTTPClient) async throws -> ComputeEngineCredential {
         let clientEmail = try await Self.requestString(httpClient: httpClient, request: Self.buildRequest(path: googleMetadataServiceEmailPath))
@@ -18,9 +19,19 @@ struct ComputeEngineCredential: RichCredential, Sendable {
         return .init(httpClient: httpClient, clientEmail: clientEmail, projectID: projectID)
     }
 
+    init(httpClient: AsyncHTTPClient.HTTPClient, clientEmail: String, projectID: String) {
+        self.httpClient = httpClient
+        self.clientEmail = clientEmail
+        self.projectID = projectID
+        self.accessToken = .init {
+            let req = try Self.buildRequest(path: googleMetadataServiceTokenPath)
+            let token = try await Self.requestAccessToken(httpClient: httpClient, request: req)
+            return (token, .seconds(token.exipresIn) - .tokenExpiryThreshold)
+        }
+    }
+
     func getAccessToken() async throws -> GoogleOAuthAccessToken {
-        let req = try Self.buildRequest(path: googleMetadataServiceTokenPath)
-        return try await Self.requestAccessToken(httpClient: httpClient, request: req)
+        return try await accessToken.getValue()
     }
 
     func sign(data: Data) async throws -> Data {
@@ -35,7 +46,7 @@ struct ComputeEngineCredential: RichCredential, Sendable {
             url: "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/\(clientEmail):signBlob",
             method: .POST,
             headers: [
-                "Authorization": "Bearer \(try await getAccessToken().accessToken)", // TODO: CredentialStoreと同じものを使いたい
+                "Authorization": "Bearer \(try await accessToken.getValue().accessToken)",
                 "Content-Type": "application/json",
             ],
             body: .data(try JSONEncoder().encode(body))

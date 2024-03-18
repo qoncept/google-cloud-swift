@@ -19,30 +19,32 @@ struct RefreshToken: Decodable {
 }
 
 struct RefreshTokenCredential: Credential, Sendable {
-    private let refreshToken: RefreshToken
-    private let httpClient: AsyncHTTPClient.HTTPClient
+    var accessToken: AutoRotatingValue<GoogleOAuthAccessToken>
 
     init(credentialsFileData: Data, httpClient: AsyncHTTPClient.HTTPClient) throws {
-        refreshToken = try JSONDecoder().decode(RefreshToken.self, from: credentialsFileData)
-        self.httpClient = httpClient
+        let refreshToken = try JSONDecoder().decode(RefreshToken.self, from: credentialsFileData)
+        self.accessToken = .init {
+            let postProperties: [(String, String)] = [
+                ("client_id", refreshToken.clientID),
+                ("client_secret", refreshToken.clientSecret),
+                ("refresh_token", refreshToken.refreshToken),
+                ("grant_type", "refresh_token"),
+            ]
+            let bodyString = postProperties.map { "\($0.0)=\($0.1)" }.joined(separator: "&")
+
+            var req = HTTPClientRequest(url: refreshTokenEndpoint)
+            req.method = .POST
+            req.headers = [
+                "Content-Type": "application/x-www-form-urlencoded",
+            ]
+            req.body = .bytes(.init(string: bodyString))
+
+            let token = try await Self.requestAccessToken(httpClient: httpClient, request: req)
+            return (token, .seconds(token.exipresIn) - .tokenExpiryThreshold)
+        }
     }
     
     func getAccessToken() async throws -> GoogleOAuthAccessToken {
-        let postProperties: [(String, String)] = [
-            ("client_id", refreshToken.clientID),
-            ("client_secret", refreshToken.clientSecret),
-            ("refresh_token", refreshToken.refreshToken),
-            ("grant_type", "refresh_token"),
-        ]
-        let bodyString = postProperties.map { "\($0.0)=\($0.1)" }.joined(separator: "&")
-
-        var req = HTTPClientRequest(url: refreshTokenEndpoint)
-        req.method = .POST
-        req.headers = [
-            "Content-Type": "application/x-www-form-urlencoded",
-        ]
-        req.body = .bytes(.init(string: bodyString))
-
-        return try await Self.requestAccessToken(httpClient: httpClient, request: req)
+        return try await accessToken.getValue()
     }
 }
