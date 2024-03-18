@@ -34,8 +34,8 @@ public struct Auth {
         return URL(string: "http://\(host)/emulator/v1")
     }
 
-    private static func projectID(from credentialStore: CredentialStore) async throws -> String? {
-        guard let richCredential = try await credentialStore.credential as? any RichCredential else {
+    private static func projectID(from credentialStore: CredentialStore) -> String? {
+        guard let richCredential = credentialStore.credential as? any RichCredential else {
             return nil
         }
         return richCredential.projectID
@@ -45,24 +45,20 @@ public struct Auth {
     private let keySource: HTTPKeySource
 
     public init(
-        credentialStore: CredentialStore,
-        client: AsyncHTTPClient.HTTPClient,
+        client: GCPClient,
         baseURL paramBaseURL: URL? = nil,
         projectID paramProjectID: String? = nil
     ) throws {
-        var credentialStore = credentialStore
+        var credentialStore = client.credentialStore
         var baseURL: URL
-        let projectID: String? = paramProjectID ??
-            Self.projectID(from: credentialStore)
+        let projectID: String? = paramProjectID ?? Self.projectID(from: credentialStore)
 
         if let paramBaseURL {
             baseURL = paramBaseURL
         } else {
             if let emulator = Self.emulatorBaseURL() {
                 baseURL = emulator
-                credentialStore = CredentialStore(
-                    credential: .makeEmulatorCredential()
-                )
+                credentialStore = CredentialStore(credential: EmulatorCredential())
             } else {
                 baseURL = Self.productionBaseURL
             }
@@ -71,7 +67,7 @@ public struct Auth {
         let authorizedClient = AuthorizedClient(
             baseURL: baseURL,
             credentialStore: credentialStore,
-            httpClient: client
+            httpClient: client.httpClient
         )
 
         try self.init(

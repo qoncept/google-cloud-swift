@@ -109,7 +109,7 @@ struct URLSigner {
         let datestamp = stampFormatter.string(from: accessibleAt)
         let credentialScope = "\(datestamp)/auto/storage/goog4_request"
 
-        let credential = authorizedClient.credentialStore.compilersafeCredential
+        let credential = authorizedClient.credentialStore.credential
         guard let credential = credential as? (any RichCredential) else {
             throw URLSignerError(message: "\(type(of: credential)) does not support signing.")
         }

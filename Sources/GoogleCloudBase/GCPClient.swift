@@ -11,6 +11,7 @@ public enum GCPClientError: Error {
 
 public struct GCPClient: Sendable {
     public let httpClient: HTTPClient
+    private let httpClientCompressionEnabled: Bool
     public var clientLogger: Logger
     internal let isShutdown = ManagedAtomic<Bool>(false)
 
@@ -18,6 +19,29 @@ public struct GCPClient: Sendable {
         case shared(HTTPClient)
         case createNewWithEventLoopGroup(any EventLoopGroup)
         case createNew
+
+        func build() -> (HTTPClient, compressionEnabled: Bool) {
+            let httpClientConfig = AsyncHTTPClient.HTTPClient.Configuration(
+                timeout: .init(connect: .seconds(10)),
+                decompression: .enabled(limit: .ratio(20))
+            )
+            switch self {
+            case .shared(let providedHTTPClient):
+                return (providedHTTPClient, false)
+            case .createNewWithEventLoopGroup(let elg):
+                let httpClient = AsyncHTTPClient.HTTPClient(
+                    eventLoopGroupProvider: .shared(elg),
+                    configuration: httpClientConfig
+                )
+                return (httpClient, true)
+            case .createNew:
+                let httpClient = AsyncHTTPClient.HTTPClient(
+                    eventLoopGroupProvider: .singleton,
+                    configuration: httpClientConfig
+                )
+                return (httpClient, true)
+            }
+        }
     }
     internal var httpClientProvider: HTTPClientProvider
 
@@ -35,40 +59,41 @@ public struct GCPClient: Sendable {
     }
     public var options: Options
 
-    public init(
-        credentialFactory: CredentialFactory = .applicationDefault,
-        options: Options = Options(),
-        httpClientProvider: HTTPClientProvider,
-        logger clientLogger: Logger = Logger(label: "GCP-no-op-logger", factory: { _ in SwiftLogNoOpLogHandler() })
-    ) {
-        let httpClientConfig = AsyncHTTPClient.HTTPClient.Configuration(
-            timeout: .init(connect: .seconds(10)),
-            decompression: .enabled(limit: .ratio(20))
-        )
-        self.httpClientProvider = httpClientProvider
-        switch httpClientProvider {
-        case .shared(let providedHTTPClient):
-            httpClient = providedHTTPClient
-        case .createNewWithEventLoopGroup(let elg):
-            httpClient = AsyncHTTPClient.HTTPClient(
-                eventLoopGroupProvider: .shared(elg),
-                configuration: httpClientConfig
-            )
-        case .createNew:
-            httpClient = AsyncHTTPClient.HTTPClient(
-                eventLoopGroupProvider: .singleton,
-                configuration: httpClientConfig
-            )
-        }
+    public var credential: any Credential {
+        credentialStore.credential
+    }
+    public var credentialStore: CredentialStore
 
-//        let credentialProvider = credentialProviderFactory.createProvider(context: .init(
-//            httpClient: httpClient,
-//            logger: clientLogger,
-//            options: options
-//        ))
-//        self.credentialProvider = credentialProvider
+    public init(
+        credentialFactory: SyncCredentialFactory,
+        options: Options = Options(),
+        httpClientProvider: HTTPClientProvider = .createNew,
+        logger clientLogger: Logger = Logger(label: "GCP-no-op-logger", factory: { _ in SwiftLogNoOpLogHandler() })
+    ) throws {
+        self.httpClientProvider = httpClientProvider
+        (httpClient, httpClientCompressionEnabled) = httpClientProvider.build()
         self.clientLogger = clientLogger
         self.options = options
+        let credential = try credentialFactory.makeCredential(
+            context: .init(httpClient: httpClient, logger: clientLogger)
+        )
+        self.credentialStore = .init(credential: credential)
+    }
+
+    public init(
+        credentialFactory: AsyncCredentialFactory = .applicationDefault,
+        options: Options = Options(),
+        httpClientProvider: HTTPClientProvider = .createNew,
+        logger clientLogger: Logger = Logger(label: "GCP-no-op-logger", factory: { _ in SwiftLogNoOpLogHandler() })
+    ) async throws {
+        self.httpClientProvider = httpClientProvider
+        (httpClient, httpClientCompressionEnabled) = httpClientProvider.build()
+        self.clientLogger = clientLogger
+        self.options = options
+        let credential = try await credentialFactory.makeCredential(
+            context: .init(httpClient: httpClient, logger: clientLogger)
+        )
+        self.credentialStore = .init(credential: credential)
     }
 
     @available(*, noasync, message: "syncShutdown() can block indefinitely, prefer shutdown()", renamed: "shutdown()")
@@ -98,8 +123,9 @@ public struct GCPClient: Sendable {
             throw GCPClientError.alreadyShutdown
         }
 
-
         switch httpClientProvider {
+        case .shared:
+            return
         case .createNew, .createNewWithEventLoopGroup:
             do {
                 try await httpClient.shutdown()
@@ -109,8 +135,6 @@ public struct GCPClient: Sendable {
                 ])
                 throw error
             }
-        case .shared:
-            return
         }
     }
 }

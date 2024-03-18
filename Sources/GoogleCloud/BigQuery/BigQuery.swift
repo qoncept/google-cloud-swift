@@ -25,7 +25,7 @@ public struct BigQuery: Sendable {
         let baseURL: URL
         if let emulatorHost = ProcessInfo.processInfo.environment[bigqueryEmulatorHostEnvVar] {
             baseURL = URL(string: "http://\(emulatorHost)/")!
-            credentialStore = CredentialStore(credential: .makeEmulatorCredential())
+            credentialStore = CredentialStore(credential: EmulatorCredential())
         } else {
             baseURL = defaultAPIEndpoint
         }

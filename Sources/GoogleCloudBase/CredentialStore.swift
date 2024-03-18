@@ -3,25 +3,16 @@ import Foundation
 private let tokenExpiryThreshold: Duration = .seconds(5 * 60)
 
 public actor CredentialStore {
-    private let credentialTask: Task<any Credential, any Error>
+    nonisolated public let credential: any Credential
     private var refreshingTask: Task<String, any Error>?
     private var storage: any DurationalCacheProtocol<String>
 
     public init(
-        context: CredentialFactory.Context,
-        credentialFactory: CredentialFactory,
+        credential: any Credential,
         clock: some Clock<Duration> = .continuous
     ) {
-        self.credentialTask = Task {
-            try await credentialFactory.makeCredential(context: context)
-        }
+        self.credential = credential
         self.storage = DurationalCache(clock: clock)
-    }
-
-    public var credential: any Credential {
-        get async throws {
-            try await credentialTask.value
-        }
     }
 
     public func accessToken(forceRefresh: Bool = false) async throws -> String {
@@ -41,7 +32,7 @@ public actor CredentialStore {
         }
 
         let task = Task<String, any Error> {
-            let tokenResponse = try await credentialTask.value.getAccessToken()
+            let tokenResponse = try await credential.getAccessToken()
             storage.store(value: tokenResponse.accessToken, expiresIn: .seconds(tokenResponse.exipresIn) - tokenExpiryThreshold)
             return tokenResponse.accessToken
         }
