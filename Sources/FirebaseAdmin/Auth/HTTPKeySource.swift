@@ -2,6 +2,7 @@ import AsyncHTTPClient
 import GoogleCloudBase
 import Foundation
 import JWTKit
+import NIOConcurrencyHelpers
 import NIOFoundationCompat
 
 /// Cache-Control ヘッダーに含まれる max-age の値に応じて公開鍵を更新する必要がある
@@ -24,41 +25,26 @@ enum HTTPKeySourceError: Error, LocalizedError {
     }
 }
 
-actor HTTPKeySource {
-    private let client: HTTPClient
-    private var willRefreshKeys: (() -> ())?
-    func setWillRefreshKeys(_ c: (() -> ())?) {
-        willRefreshKeys = c
-    }
+struct HTTPKeySource {
+    private var client: HTTPClient
+    private var rotating: AutoRotatingValue<JWTKeyCollection>
 
-    private var storage: any DurationalCacheProtocol<JWTKeyCollection>
+    private var willRefreshKeys: NIOLockedValueBox<(@Sendable () -> ())?>
+    func setWillRefreshKeys(_ c: (@Sendable () -> ())?) {
+        willRefreshKeys.withLockedValue { value in
+            value = c
+        }
+    }
 
     init(client: HTTPClient, clock: some Clock<Duration> = .continuous) {
         self.client = client
-        self.storage = DurationalCache(clock: clock)
-    }
-
-    private var refreshingTask: Task<Void, any Error>?
-
-    func publicKeys() async throws -> JWTKeyCollection {
-        if let keys = storage.cachedValue {
-            return keys
-        }
-        try await refreshKeys()
-        return storage.cachedValue!
-    }
-
-    private func refreshKeys() async throws {
-        if let refreshingTask {
-            return try await refreshingTask.value
-        }
-
-        let task = Task {
-            willRefreshKeys?()
-            let res = try await client.execute(url: publicKeysURL).map { UnsafeTransfer($0) }.get().wrappedValue
-
-            guard let body = res.body,
-                  let bodyDictionary = try? JSONDecoder().decode([String: String].self, from: body),
+        let willRefreshKeys = NIOLockedValueBox<(@Sendable () -> ())?>(nil)
+        self.willRefreshKeys = willRefreshKeys
+        self.rotating = AutoRotatingValue(clock: clock) {
+            willRefreshKeys.withLockedValue { $0?() }
+            let res = try await client.execute(HTTPClientRequest(url: publicKeysURL), timeout: .seconds(10))
+            let body = try await res.body.collect(upTo: .max)
+            guard let bodyDictionary = try? JSONDecoder().decode([String: String].self, from: body),
                   !bodyDictionary.isEmpty
             else {
                 throw HTTPKeySourceError.invalidBody
@@ -73,16 +59,15 @@ actor HTTPKeySource {
             }
 
             let maxAge = try Self.findMaxAge(res: res)
-            storage.store(value: newSigners, expiresIn: maxAge)
+            return (newSigners, maxAge)
         }
-
-        refreshingTask = task
-        defer { refreshingTask = nil }
-
-        return try await task.value
     }
 
-    private static func findMaxAge(res: HTTPClient.Response) throws -> Duration {
+    func publicKeys() async throws -> JWTKeyCollection {
+        return try await rotating.getValue()
+    }
+
+    private static func findMaxAge(res: HTTPClientResponse) throws -> Duration {
         guard let cacheControl = res.headers.first(name: "cache-control") else {
             throw HTTPKeySourceError.noCacheControl
         }
@@ -99,16 +84,5 @@ actor HTTPKeySource {
         }
 
         throw HTTPKeySourceError.noMaxAge
-    }
-}
-
-@usableFromInline
-struct UnsafeTransfer<Wrapped>: @unchecked Sendable {
-    @usableFromInline
-    var wrappedValue: Wrapped
-
-    @inlinable
-    init(_ wrappedValue: Wrapped) {
-        self.wrappedValue = wrappedValue
     }
 }

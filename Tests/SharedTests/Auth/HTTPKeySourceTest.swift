@@ -1,4 +1,5 @@
 import AsyncHTTPClient
+import Atomics
 @testable import FirebaseAdmin
 import XCTest
 
@@ -25,25 +26,25 @@ final class HTTPKeySourceTest: XCTestCase {
         mockClock.nowValue = Date()
         let source = makeKeySource()
 
-        var refreshCalled = 0
-        await source.setWillRefreshKeys {
-            refreshCalled += 1
+        let refreshCalled = ManagedAtomic(0)
+        source.setWillRefreshKeys {
+            refreshCalled.wrappingIncrement(ordering: .relaxed)
         }
 
         do {
             let keys = try await source.publicKeys()
             XCTAssertNotNil(keys)
-            XCTAssertEqual(refreshCalled, 1)
+            XCTAssertEqual(refreshCalled.load(ordering: .relaxed), 1)
         }
         do {
             let keys = try await source.publicKeys()
             XCTAssertNotNil(keys)
-            XCTAssertEqual(refreshCalled, 1)
+            XCTAssertEqual(refreshCalled.load(ordering: .relaxed), 1)
         }
         do {
             let keys = try await source.publicKeys()
             XCTAssertNotNil(keys)
-            XCTAssertEqual(refreshCalled, 1)
+            XCTAssertEqual(refreshCalled.load(ordering: .relaxed), 1)
         }
 
         mockClock.nowValue?.addTimeInterval(60 * 60 * 24)
@@ -51,12 +52,12 @@ final class HTTPKeySourceTest: XCTestCase {
         do {
             let keys = try await source.publicKeys()
             XCTAssertNotNil(keys)
-            XCTAssertEqual(refreshCalled, 2)
+            XCTAssertEqual(refreshCalled.load(ordering: .relaxed), 2)
         }
         do {
             let keys = try await source.publicKeys()
             XCTAssertNotNil(keys)
-            XCTAssertEqual(refreshCalled, 2)
+            XCTAssertEqual(refreshCalled.load(ordering: .relaxed), 2)
         }
     }
 
@@ -64,9 +65,9 @@ final class HTTPKeySourceTest: XCTestCase {
         mockClock.nowValue = Date()
         let source = makeKeySource()
 
-        var refreshCalled = 0
-        await source.setWillRefreshKeys {
-            refreshCalled += 1
+        let refreshCalled = ManagedAtomic(0)
+        source.setWillRefreshKeys {
+            refreshCalled.wrappingIncrement(ordering: .relaxed)
         }
 
         let times = 30
@@ -79,6 +80,6 @@ final class HTTPKeySourceTest: XCTestCase {
             try await g.waitForAll()
         }
 
-        XCTAssertEqual(refreshCalled, 1)
+        XCTAssertEqual(refreshCalled.load(ordering: .relaxed), 1)
     }
 }

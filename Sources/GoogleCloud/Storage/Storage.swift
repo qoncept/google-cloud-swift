@@ -10,19 +10,19 @@ private let defaultAPIEndpoint = URL(string: "https://storage.googleapis.com/")!
 public struct Storage: Sendable {
     private let authorizedClient: AuthorizedClient
     public init(client: GCPClient) {
-        var credentialStore = client.credentialStore
+        var credential = client.credential
         let baseURL: URL
 
         if let emulatorHost = ProcessInfo.processInfo.environment[storageEmulatorHostEnvVar] {
             baseURL = URL(string: "http://\(emulatorHost)/")!
-            credentialStore = CredentialStore(credential: EmulatorCredential())
+            credential = EmulatorCredential()
         } else {
             baseURL = defaultAPIEndpoint
         }
 
         authorizedClient = .init(
             baseURL: baseURL,
-            credentialStore:  credentialStore,
+            credential:  credential,
             httpClient: client.httpClient
         )
     }

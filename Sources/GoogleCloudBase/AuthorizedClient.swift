@@ -13,27 +13,27 @@ struct AuthorizedClientError: Error, CustomStringConvertible, LocalizedError {
     var errorDescription: String? { message }
 }
 
-public struct AuthorizedClient: Sendable {
-    public var baseURL: URL
-    public var credentialStore: CredentialStore
-    public var httpClient: AsyncHTTPClient.HTTPClient
+package struct AuthorizedClient: Sendable {
+    package var baseURL: URL
+    package var credential: any Credential
+    package var httpClient: AsyncHTTPClient.HTTPClient
     private let logger: Logger = .init(label: "AuthorizedClient")
 
-    public init(
+    package init(
         baseURL: URL,
-        credentialStore: CredentialStore,
+        credential: any Credential,
         httpClient: HTTPClient
     ) {
         self.baseURL = baseURL
-        self.credentialStore = credentialStore
+        self.credential = credential
         self.httpClient = httpClient
     }
 
-    private func token() async throws -> String {
-        return try await credentialStore.accessToken()
+    private func token() async throws -> AccessToken {
+        return try await credential.getAccessToken()
     }
 
-    public func get<Response: Decodable>(
+    package func get<Response: Decodable>(
         path: String,
         headers: HTTPHeaders = HTTPHeaders(),
         queryItems: [URLQueryItem] = [],
@@ -53,7 +53,7 @@ public struct AuthorizedClient: Sendable {
         return try handleResponse(res: res)
     }
 
-    public func post<Body: Encodable, Response: Decodable>(
+    package func post<Body: Encodable, Response: Decodable>(
         path: String,
         headers: HTTPHeaders = HTTPHeaders(),
         queryItems: [URLQueryItem] = [],
@@ -69,7 +69,7 @@ public struct AuthorizedClient: Sendable {
         )
     }
 
-    public func post<Response: Decodable>(
+    package func post<Response: Decodable>(
         path: String,
         headers: HTTPHeaders = HTTPHeaders(),
         queryItems: [URLQueryItem] = [],
@@ -96,7 +96,7 @@ public struct AuthorizedClient: Sendable {
         return try handleResponse(res: res)
     }
 
-    public func delete(
+    package func delete(
         path: String,
         headers: HTTPHeaders = HTTPHeaders()
     ) async throws {
@@ -143,8 +143,6 @@ public struct AuthorizedClient: Sendable {
             throw AuthorizedClientError(message: "no body")
         }
 
-//        print(String(buffer: body))
-
         if UInt(400)..<600 ~= res.status.code {
             let errorResponse: ErrorResponse
             do {
@@ -183,18 +181,6 @@ public struct AuthorizedClient: Sendable {
             throw errorResponse
         }
     }
-}
-
-public struct ErrorResponse: Decodable, Error, CustomStringConvertible, LocalizedError {
-    public struct Error: Decodable, Sendable {
-        public var code: Int
-        public var message: String
-        public var status: String?
-        public var errors: [[String: String]]?
-    }
-    public var error: Error
-    public var description: String { "\(error.message)(\(error.code))" }
-    public var errorDescription: String? { description }
 }
 
 extension URL {

@@ -59,10 +59,7 @@ public struct GCPClient: Sendable {
     }
     public var options: Options
 
-    public var credential: any Credential {
-        credentialStore.credential
-    }
-    public var credentialStore: CredentialStore
+    public var credential: any Credential
 
     public init(
         credentialFactory: SyncCredentialFactory,
@@ -74,10 +71,9 @@ public struct GCPClient: Sendable {
         (httpClient, httpClientCompressionEnabled) = httpClientProvider.build()
         self.clientLogger = clientLogger
         self.options = options
-        let credential = try credentialFactory.makeCredential(
+        self.credential = try credentialFactory.makeCredential(
             context: .init(httpClient: httpClient, logger: clientLogger)
         )
-        self.credentialStore = .init(credential: credential)
     }
 
     public init(
@@ -90,10 +86,9 @@ public struct GCPClient: Sendable {
         (httpClient, httpClientCompressionEnabled) = httpClientProvider.build()
         self.clientLogger = clientLogger
         self.options = options
-        let credential = try await credentialFactory.makeCredential(
+        self.credential = try await credentialFactory.makeCredential(
             context: .init(httpClient: httpClient, logger: clientLogger)
         )
-        self.credentialStore = .init(credential: credential)
     }
 
     @available(*, noasync, message: "syncShutdown() can block indefinitely, prefer shutdown()", renamed: "shutdown()")

@@ -6,35 +6,29 @@ import NIOHTTP1
 private let defaultAPIEndpoint = URL(string: "https://cloudtasks.googleapis.com/")!
 
 public struct TasksQueue: Sendable {
-    private let credentialStore: CredentialStore
+    private let credential: any Credential
     private let authorizedClient: AuthorizedClient
     private let parent: String
 
     public init(
+        client: GCPClient,
         projectID: String,
         location: String,
-        name: String,
-        credentialStore: CredentialStore,
-        client: AsyncHTTPClient.HTTPClient
+        name: String
     ) {
         self.init(
-            id: "projects/\(projectID)/locations/\(location)/queues/\(name)",
-            credentialStore: credentialStore,
-            client: client
+            client: client,
+            id: "projects/\(projectID)/locations/\(location)/queues/\(name)"
         )
     }
 
-    public init(
-        id: String,
-        credentialStore: CredentialStore,
-        client: AsyncHTTPClient.HTTPClient
-    ) {
+    public init(client: GCPClient, id: String) {
         parent = id.addingSlashSuffix.choppingSlashPrefix
-        self.credentialStore = credentialStore
+        self.credential = client.credential
         authorizedClient = .init(
             baseURL: defaultAPIEndpoint,
-            credentialStore: credentialStore,
-            httpClient: client
+            credential: credential,
+            httpClient: client.httpClient
         )
     }
 
@@ -56,7 +50,7 @@ public struct TasksQueue: Sendable {
 
         var request = request
         if request.oidcToken == nil && request.oauthToken == nil {
-            if let serviceAccountEmail = (credentialStore.credential as? (any RichCredential))?.clientEmail {
+            if let serviceAccountEmail = (credential as? (any RichCredential))?.clientEmail {
                 request.oidcToken = .init(serviceAccountEmail: serviceAccountEmail, audience: nil)
             }
         }

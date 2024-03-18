@@ -24,41 +24,43 @@ private struct ServiceAccount: Decodable {
 }
 
 struct ServiceAccountCredential: RichCredential, Sendable {
-    let projectID: String
-    private let privateKey: _RSA.Signing.PrivateKey
-    private let signer: Task<JWTKeyCollection, Never>
+    var projectID: String
     let clientEmail: String
-
-    private let httpClient: AsyncHTTPClient.HTTPClient
+    private let privateKey: _RSA.Signing.PrivateKey
+    let accessToken: AutoRotatingValue<AccessToken>
 
     init(credentialsFileData: Data, httpClient: AsyncHTTPClient.HTTPClient) throws {
         let serviceAccount = try JSONDecoder().decode(ServiceAccount.self, from: credentialsFileData)
         projectID = serviceAccount.projectID
+        clientEmail = serviceAccount.clientEmail
         privateKey = try _RSA.Signing.PrivateKey(pemRepresentation: serviceAccount.privateKey)
         let key = try Insecure.RSA.PrivateKey(backing: privateKey)
-        signer = Task {
+        let signerTask = Task {
             await JWTKeyCollection().addRS256(key: key)
         }
-        clientEmail = serviceAccount.clientEmail
 
-        self.httpClient = httpClient
+        self.accessToken = .init {
+            let signer = await signerTask.value
+            let jwt = try await Self.makeAuthJWT(clientEmail: serviceAccount.clientEmail, signer: signer)
+            let postData = "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=\(jwt)"
+
+            var req = HTTPClientRequest(url: "https://\(googleAuthTokenHost)/\(googleAuthTokenPath)")
+            req.method = .POST
+            req.headers = [
+                "Content-Type": "application/x-www-form-urlencoded",
+            ]
+            req.body = .bytes(.init(string: postData))
+
+            let token = try await Self.requestAccessToken(httpClient: httpClient, request: req)
+            return (token.accessToken, .seconds(token.exipresIn) - .tokenExpiryThreshold)
+        }
     }
 
-    func getAccessToken() async throws -> GoogleOAuthAccessToken {
-        let jwt = try await makeAuthJWT()
-        let postData = "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=\(jwt)"
-
-        var req = HTTPClientRequest(url: "https://\(googleAuthTokenHost)/\(googleAuthTokenPath)")
-        req.method = .POST
-        req.headers = [
-            "Content-Type": "application/x-www-form-urlencoded",
-        ]
-        req.body = .bytes(.init(string: postData))
-
-        return try await Self.requestAccessToken(httpClient: httpClient, request: req)
+    func getAccessToken() async throws -> AccessToken {
+        return try await accessToken.getValue()
     }
 
-    private func makeAuthJWT() async throws -> String {
+    private static func makeAuthJWT(clientEmail: String, signer: JWTKeyCollection) async throws -> String {
         let scope = [
             "https://www.googleapis.com/auth/cloud-platform",
             "https://www.googleapis.com/auth/firebase.database",
@@ -76,7 +78,7 @@ struct ServiceAccountCredential: RichCredential, Sendable {
             scope: scope
         )
 
-        return try await signer.value.sign(jwtPayload)
+        return try await signer.sign(jwtPayload)
     }
 
     func sign(data: Data) async throws -> Data {

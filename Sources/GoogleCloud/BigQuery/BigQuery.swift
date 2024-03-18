@@ -9,32 +9,29 @@ private let defaultAPIEndpoint = URL(string: "https://bigquery.googleapis.com/")
 
 public struct BigQuery: Sendable {
     public var projectID: String
-    private let credentialStore: CredentialStore
     private var authorizedClient: AuthorizedClient
     public var threadPool: NIOThreadPool
 
     public init(
+        client: GCPClient,
         projectID: String,
-        credentialStore: CredentialStore,
-        client: AsyncHTTPClient.HTTPClient,
         threadPool: NIOThreadPool = NIOThreadPool.singleton
     ) {
         self.projectID = projectID
 
-        var credentialStore = credentialStore
+        var credential = client.credential
         let baseURL: URL
         if let emulatorHost = ProcessInfo.processInfo.environment[bigqueryEmulatorHostEnvVar] {
             baseURL = URL(string: "http://\(emulatorHost)/")!
-            credentialStore = CredentialStore(credential: EmulatorCredential())
+            credential = EmulatorCredential()
         } else {
             baseURL = defaultAPIEndpoint
         }
 
-        self.credentialStore = credentialStore
         authorizedClient = .init(
             baseURL: baseURL,
-            credentialStore: credentialStore,
-            httpClient: client
+            credential: credential,
+            httpClient: client.httpClient
         )
         self.threadPool = threadPool
     }
