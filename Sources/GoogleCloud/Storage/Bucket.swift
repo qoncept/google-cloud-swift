@@ -63,7 +63,7 @@ public struct Bucket: Sendable {
                 URLQueryItem(name: "name", value: name),
                 URLQueryItem(name: "uploadType", value: "media"),
             ],
-            payload: .data(.init(data: media)),
+            payload: .data(media),
             headers: [
                 "Content-Type": contentType ?? Mimetype.detect(name)
             ],

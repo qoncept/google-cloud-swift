@@ -25,23 +25,23 @@ package struct AuthorizedClient: Sendable {
         return try await credential.getAccessToken()
     }
 
-    package struct EmptyResponse: Decodable {}
+    package struct Empty: Codable {}
 
-    package enum Payload {
+    package enum Payload<JSONType: Encodable> {
         case none
-        case json(any Encodable)
-        case data(ByteBuffer)
+        case json(JSONType)
+        case raw(ByteBuffer)
     }
 
     package func execute<Response: Decodable>(
         method: HTTPMethod,
         path: String,
         queryItems: [URLQueryItem] = [],
-        payload: Payload = .none,
+        payload: Payload<some Any> = Payload<Empty>.none,
         headers: HTTPHeaders = HTTPHeaders(),
         timeout: TimeAmount = .seconds(20),
         logger: Logger?,
-        responseType: Response.Type = EmptyResponse.self
+        responseType: Response.Type = Empty.self
     ) async throws -> Response {
         var components = URLComponents(url: baseURL.concattingPath(path), resolvingAgainstBaseURL: false)!
         components.queryItems = queryItems
@@ -57,15 +57,15 @@ package struct AuthorizedClient: Sendable {
             if !req.headers.contains(name: "Content-Type") {
                 req.headers.add(name: "Content-Type", value: "application/json")
             }
-        case .data(let buffer):
+        case .raw(let buffer):
             req.body = .bytes(buffer)
         }
 
         logger?.log(level: gcpClient.options.requestLogLevel, "\(req.method.rawValue) \(req.url)")
         let res = try await gcpClient.httpClient.execute(req, timeout: timeout, logger: logger)
 
-        if responseType == EmptyResponse.self {
-            return EmptyResponse() as! Response
+        if responseType == Empty.self {
+            return Empty() as! Response
         } else {
             let resBody = try await res.body.collect(upTo: .max)
 
@@ -88,64 +88,6 @@ package struct AuthorizedClient: Sendable {
         }
     }
 
-//    package func post<Body: Encodable, Response: Decodable>(
-//        path: String,
-//        headers: HTTPHeaders = HTTPHeaders(),
-//        queryItems: [URLQueryItem] = [],
-//        payload: Body,
-//        responseType: Response.Type
-//    ) async throws -> Response {
-//        return try await post(
-//            path: path,
-//            headers: headers,
-//            queryItems: queryItems,
-//            payload: try JSONEncoder().encode(payload),
-//            responseType: responseType
-//        )
-//    }
-//
-//    package func post<Response: Decodable>(
-//        path: String,
-//        headers: HTTPHeaders = HTTPHeaders(),
-//        queryItems: [URLQueryItem] = [],
-//        payload: Data,
-//        responseType: Response.Type
-//    ) async throws -> Response {
-//        var components = URLComponents(url: baseURL.concattingPath(path), resolvingAgainstBaseURL: false)!
-//        components.queryItems = queryItems
-//
-//        var headers = try await mergedHeaders(headers)
-//        if !headers.contains(name: "Content-Length") {
-//            headers.add(name: "Content-Length", value: "\(payload.count)")
-//        }
-//
-//        let req = try HTTPClient.Request(
-//            url: components.url!,
-//            method: .POST,
-//            headers: try await mergedHeaders(headers),
-//            body: .data(payload)
-//        )
-//        logger.debug("POST \(req.url.absoluteString)")
-//        let res = try await send(request: req)
-//
-//        return try handleResponse(res: res)
-//    }
-//
-//    package func delete(
-//        path: String,
-//        headers: HTTPHeaders = HTTPHeaders()
-//    ) async throws {
-//        let req = try HTTPClient.Request(
-//            url: baseURL.concattingPath(path),
-//            method: .DELETE,
-//            headers: try await mergedHeaders(headers)
-//        )
-//        logger.debug("DELETE \(req.url.absoluteString)")
-//        let res = try await send(request: req)
-//        
-//        return try handleResponse(res: res)
-//    }
-
     private func mergedHeaders(_ headers: HTTPHeaders) async throws -> HTTPHeaders {
         var headers = headers
         headers.add(contentsOf: [
@@ -154,51 +96,21 @@ package struct AuthorizedClient: Sendable {
         ])
         return headers
     }
-
-//    private func handleResponse<Response: Decodable>(res: HTTPClientResponse, responseType: Response.Type = Response.self) async throws -> Response {
-//        let body = try await res.body.collect(upTo: .max)
-//
-//        if UInt(400)..<600 ~= res.status.code {
-//            let errorResponse: ErrorResponse
-//            do {
-//                errorResponse = try JSONDecoder().decode(ErrorResponse.self, from: body)
-//            } catch {
-//                if let data = body.getData(at: body.readerIndex, length: body.readableBytes),
-//                   let string = String(data: data, encoding: .utf8) {
-//                    // 404のときなど、JSONでないレスポンスが返ることがある
-//                    throw ErrorResponse(error: .init(code: Int(res.status.code), message: string))
-//                }
-//                throw error
-//            }
-//            throw errorResponse
-//        }
-//
-//        return try JSONDecoder().decode(Response.self, from: body)
-//    }
-//
-//    private func handleResponse(res: HTTPClientResponse) async throws {
-//        if UInt(400)..<600 ~= res.status.code {
-//            let body = try await res.body.collect(upTo: .max)
-//
-//            let errorResponse: ErrorResponse
-//            do {
-//                errorResponse = try JSONDecoder().decode(ErrorResponse.self, from: body)
-//            } catch {
-//                if let data = body.getData(at: body.readerIndex, length: body.readableBytes),
-//                   let string = String(data: data, encoding: .utf8) {
-//                    // 404のときなど、JSONでないレスポンスが返ることがある
-//                    throw ErrorResponse(error: .init(code: Int(res.status.code), message: string))
-//                }
-//                throw error
-//            }
-//            throw errorResponse
-//        }
-//    }
 }
 
 extension URL {
     fileprivate func concattingPath(_ component: String) -> URL {
         if component.isEmpty || component == "/" { return self }
         return URL(string: absoluteString.addingSlashSuffix + component.choppingSlashPrefix) ?? self
+    }
+}
+
+extension AuthorizedClient.Payload where JSONType == AuthorizedClient.Empty {
+    package static func data(_ data: Data) -> Self {
+        return .raw(ByteBuffer(data: data))
+    }
+
+    package static func buffer(_ buffer: ByteBuffer) -> Self {
+        return .raw(buffer)
     }
 }
