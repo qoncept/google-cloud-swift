@@ -34,8 +34,8 @@ public struct Auth {
         return URL(string: "http://\(host)/emulator/v1")
     }
 
-    private static func projectID(from credentialStore: CredentialStore) -> String? {
-        guard let richCredential = credentialStore.credential as? any RichCredential else {
+    private static func projectID(from credential: any Credential) -> String? {
+        guard let richCredential = credential as? any RichCredential else {
             return nil
         }
         return richCredential.projectID
@@ -49,16 +49,16 @@ public struct Auth {
         baseURL paramBaseURL: URL? = nil,
         projectID paramProjectID: String? = nil
     ) throws {
-        var credentialStore = client.credentialStore
+        var credential = client.credential
         var baseURL: URL
-        let projectID: String? = paramProjectID ?? Self.projectID(from: credentialStore)
+        let projectID: String? = paramProjectID ?? Self.projectID(from: credential)
 
         if let paramBaseURL {
             baseURL = paramBaseURL
         } else {
             if let emulator = Self.emulatorBaseURL() {
                 baseURL = emulator
-                credentialStore = CredentialStore(credential: EmulatorCredential())
+                credential = EmulatorCredential()
             } else {
                 baseURL = Self.productionBaseURL
             }
@@ -66,7 +66,7 @@ public struct Auth {
 
         let authorizedClient = AuthorizedClient(
             baseURL: baseURL,
-            credentialStore: credentialStore,
+            credential: credential,
             httpClient: client.httpClient
         )
 
@@ -83,7 +83,7 @@ public struct Auth {
         let projectID: String
         if let paramProjectID {
             projectID = paramProjectID
-        } else if let id = Self.projectID(from: authorizedClient.credentialStore) {
+        } else if let id = Self.projectID(from: authorizedClient.credential) {
             projectID = id
         } else {
             throw AuthError(message: "projectID must be provided if the credential doesn't have it.")

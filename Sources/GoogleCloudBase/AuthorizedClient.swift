@@ -15,22 +15,22 @@ struct AuthorizedClientError: Error, CustomStringConvertible, LocalizedError {
 
 public struct AuthorizedClient: Sendable {
     public var baseURL: URL
-    public var credentialStore: CredentialStore
+    public var credential: any Credential
     public var httpClient: AsyncHTTPClient.HTTPClient
     private let logger: Logger = .init(label: "AuthorizedClient")
 
     public init(
         baseURL: URL,
-        credentialStore: CredentialStore,
+        credential: any Credential,
         httpClient: HTTPClient
     ) {
         self.baseURL = baseURL
-        self.credentialStore = credentialStore
+        self.credential = credential
         self.httpClient = httpClient
     }
 
-    private func token() async throws -> String {
-        return try await credentialStore.accessToken()
+    private func token() async throws -> AccessToken {
+        return try await credential.getAccessToken()
     }
 
     public func get<Response: Decodable>(

@@ -27,7 +27,7 @@ struct ServiceAccountCredential: RichCredential, Sendable {
     var projectID: String
     let clientEmail: String
     private let privateKey: _RSA.Signing.PrivateKey
-    let accessToken: AutoRotatingValue<GoogleOAuthAccessToken>
+    let accessToken: AutoRotatingValue<AccessToken>
 
     init(credentialsFileData: Data, httpClient: AsyncHTTPClient.HTTPClient) throws {
         let serviceAccount = try JSONDecoder().decode(ServiceAccount.self, from: credentialsFileData)
@@ -52,11 +52,11 @@ struct ServiceAccountCredential: RichCredential, Sendable {
             req.body = .bytes(.init(string: postData))
 
             let token = try await Self.requestAccessToken(httpClient: httpClient, request: req)
-            return (token, .seconds(token.exipresIn) - .tokenExpiryThreshold)
+            return (token.accessToken, .seconds(token.exipresIn) - .tokenExpiryThreshold)
         }
     }
 
-    func getAccessToken() async throws -> GoogleOAuthAccessToken {
+    func getAccessToken() async throws -> AccessToken {
         return try await accessToken.getValue()
     }
 

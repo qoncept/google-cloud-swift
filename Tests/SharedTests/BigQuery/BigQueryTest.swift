@@ -28,7 +28,7 @@ final class BigQueryTest: XCTestCase {
     private func makeBigQuery() -> BigQuery {
         BigQuery(
             projectID: "testing-project-id",
-            credentialStore: CredentialStore(credential: MockCredential()),
+            credential: MockCredential(),
             client: Self.client
         )
     }

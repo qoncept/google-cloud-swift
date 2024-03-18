@@ -11,7 +11,7 @@ struct ComputeEngineCredential: RichCredential, Sendable {
     var httpClient: AsyncHTTPClient.HTTPClient
     var clientEmail: String
     var projectID: String
-    var accessToken: AutoRotatingValue<GoogleOAuthAccessToken>
+    var accessToken: AutoRotatingValue<AccessToken>
 
     static func makeFromMetadata(httpClient: AsyncHTTPClient.HTTPClient) async throws -> ComputeEngineCredential {
         let clientEmail = try await Self.requestString(httpClient: httpClient, request: Self.buildRequest(path: googleMetadataServiceEmailPath))
@@ -26,11 +26,11 @@ struct ComputeEngineCredential: RichCredential, Sendable {
         self.accessToken = .init {
             let req = try Self.buildRequest(path: googleMetadataServiceTokenPath)
             let token = try await Self.requestAccessToken(httpClient: httpClient, request: req)
-            return (token, .seconds(token.exipresIn) - .tokenExpiryThreshold)
+            return (token.accessToken, .seconds(token.exipresIn) - .tokenExpiryThreshold)
         }
     }
 
-    func getAccessToken() async throws -> GoogleOAuthAccessToken {
+    func getAccessToken() async throws -> AccessToken {
         return try await accessToken.getValue()
     }
 
@@ -46,7 +46,7 @@ struct ComputeEngineCredential: RichCredential, Sendable {
             url: "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/\(clientEmail):signBlob",
             method: .POST,
             headers: [
-                "Authorization": "Bearer \(try await accessToken.getValue().accessToken)",
+                "Authorization": "Bearer \(try await accessToken.getValue())",
                 "Content-Type": "application/json",
             ],
             body: .data(try JSONEncoder().encode(body))

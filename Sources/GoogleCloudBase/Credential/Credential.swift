@@ -4,7 +4,7 @@ import NIOCore
 import NIOFoundationCompat
 
 public protocol Credential: Sendable {
-    func getAccessToken() async throws -> GoogleOAuthAccessToken
+    func getAccessToken() async throws -> AccessToken
 }
 
 public protocol RichCredential: Credential {
@@ -35,11 +35,21 @@ struct CredentialErrorFrame: Decodable, Error, CustomStringConvertible, Localize
     var errorDescription: String? { description }
 }
 
+struct AccessTokenResponse: Decodable, Sendable {
+    var accessToken: AccessToken
+    var exipresIn: Double // seconds
+
+    enum CodingKeys: String, CodingKey {
+        case accessToken = "access_token"
+        case exipresIn = "expires_in"
+    }
+}
+
 extension Credential {
     internal static func requestAccessToken(
         httpClient: AsyncHTTPClient.HTTPClient,
         request: HTTPClientRequest
-    ) async throws -> GoogleOAuthAccessToken {
+    ) async throws -> AccessTokenResponse {
         let res = try await httpClient.execute(request, timeout: .seconds(10))
         let body = try await res.body.collect(upTo: .max)
 
@@ -48,7 +58,7 @@ extension Credential {
             throw CredentialError(message: errorFrame.description)
         }
 
-        return try JSONDecoder().decode(GoogleOAuthAccessToken.self, from: body)
+        return try JSONDecoder().decode(AccessTokenResponse.self, from: body)
     }
 
 

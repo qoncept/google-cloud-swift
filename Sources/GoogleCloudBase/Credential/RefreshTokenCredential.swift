@@ -19,7 +19,7 @@ struct RefreshToken: Decodable {
 }
 
 struct RefreshTokenCredential: Credential, Sendable {
-    var accessToken: AutoRotatingValue<GoogleOAuthAccessToken>
+    var accessToken: AutoRotatingValue<AccessToken>
 
     init(credentialsFileData: Data, httpClient: AsyncHTTPClient.HTTPClient) throws {
         let refreshToken = try JSONDecoder().decode(RefreshToken.self, from: credentialsFileData)
@@ -40,11 +40,11 @@ struct RefreshTokenCredential: Credential, Sendable {
             req.body = .bytes(.init(string: bodyString))
 
             let token = try await Self.requestAccessToken(httpClient: httpClient, request: req)
-            return (token, .seconds(token.exipresIn) - .tokenExpiryThreshold)
+            return (token.accessToken, .seconds(token.exipresIn) - .tokenExpiryThreshold)
         }
     }
     
-    func getAccessToken() async throws -> GoogleOAuthAccessToken {
+    func getAccessToken() async throws -> AccessToken {
         return try await accessToken.getValue()
     }
 }
