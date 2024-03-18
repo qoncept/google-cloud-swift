@@ -10,9 +10,11 @@ public enum GCPClientError: Error {
 }
 
 public struct GCPClient: Sendable {
+    public static let loggingDisabled = Logger(label: "GCP-no-op-logger", factory: { _ in SwiftLogNoOpLogHandler() })
+
     public let httpClient: HTTPClient
     private let httpClientCompressionEnabled: Bool
-    public var clientLogger: Logger
+    internal var clientLogger: Logger
     internal let isShutdown = ManagedAtomic<Bool>(false)
 
     public enum HTTPClientProvider: Sendable {
@@ -57,7 +59,7 @@ public struct GCPClient: Sendable {
             self.errorLogLevel = errorLogLevel
         }
     }
-    public var options: Options
+    internal var options: Options
 
     public var credential: any Credential
 
@@ -65,7 +67,7 @@ public struct GCPClient: Sendable {
         credentialFactory: SyncCredentialFactory,
         options: Options = Options(),
         httpClientProvider: HTTPClientProvider = .createNew,
-        logger clientLogger: Logger = Logger(label: "GCP-no-op-logger", factory: { _ in SwiftLogNoOpLogHandler() })
+        logger clientLogger: Logger = Self.loggingDisabled
     ) throws {
         self.httpClientProvider = httpClientProvider
         (httpClient, httpClientCompressionEnabled) = httpClientProvider.build()
@@ -80,7 +82,7 @@ public struct GCPClient: Sendable {
         credentialFactory: AsyncCredentialFactory = .applicationDefault,
         options: Options = Options(),
         httpClientProvider: HTTPClientProvider = .createNew,
-        logger clientLogger: Logger = Logger(label: "GCP-no-op-logger", factory: { _ in SwiftLogNoOpLogHandler() })
+        logger clientLogger: Logger = Self.loggingDisabled
     ) async throws {
         self.httpClientProvider = httpClientProvider
         (httpClient, httpClientCompressionEnabled) = httpClientProvider.build()

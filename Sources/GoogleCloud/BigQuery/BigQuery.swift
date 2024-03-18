@@ -1,6 +1,7 @@
 import AsyncHTTPClient
 import Foundation
 import GoogleCloudBase
+import Logging
 import NIOHTTP1
 import NIOPosix
 
@@ -30,8 +31,8 @@ public struct BigQuery: Sendable {
 
         authorizedClient = .init(
             baseURL: baseURL,
-            credential: credential,
-            httpClient: client.httpClient
+            gcpClient: client,
+            credential: credential
         )
         self.threadPool = threadPool
     }
@@ -48,16 +49,18 @@ public struct BigQuery: Sendable {
     public func query<Row: Decodable>(
         _ query: BigQueryQueryString,
         options: QueryOptions = QueryOptions(),
-        decoding rowType: Row.Type
+        decoding rowType: Row.Type,
+        logger: Logger? = nil
     ) async throws -> [Row] {
-        return try await queryStream(query, options: options, decoding: rowType)
+        return try await queryStream(query, options: options, decoding: rowType, logger: logger)
             .reduce(into: [], { $0.append(contentsOf: $1) })
     }
 
     public func queryStream<Row: Decodable>(
         _ query: BigQueryQueryString,
         options: QueryOptions = QueryOptions(),
-        decoding rowType: Row.Type
+        decoding rowType: Row.Type,
+        logger: Logger? = nil
     ) -> AsyncThrowingStream<[Row], any Error> {
         return AsyncThrowingStream([Row].self, bufferingPolicy: .unbounded) { (continuetion) in
             let task = Task {
@@ -75,7 +78,7 @@ public struct BigQuery: Sendable {
                         }
                     }
 
-                    let response = try await queryInternal(query, options: options)
+                    let response = try await queryInternal(query, options: options, logger: logger)
 
                     var nextPageToken: String? = response.pageToken
                     var nextRows: BigQueryQueryResponse = response
@@ -88,7 +91,8 @@ public struct BigQuery: Sendable {
                             async let fetch = try await getQueryResult(
                                 jobReference: response.jobReference,
                                 pageToken: pageToken,
-                                options: options
+                                options: options,
+                                logger: logger
                             )
                             
                             try await asyncDecode(response: currentRows)
@@ -116,7 +120,8 @@ public struct BigQuery: Sendable {
 
     private func queryInternal(
         _ query: BigQueryQueryString,
-        options: QueryOptions = QueryOptions()
+        options: QueryOptions = QueryOptions(),
+        logger: Logger?
     ) async throws -> BigQueryQueryResponse {
         let (query, binds) = BigQueryDataTranslation.encode(query)
 
@@ -124,9 +129,11 @@ public struct BigQuery: Sendable {
         request.maxResults = options.maxResults
         request.useLegacySql = options.useLegacySql
 
-        let response = try await authorizedClient.post(
+        let response = try await authorizedClient.execute(
+            method: .POST,
             path: "bigquery/v2/projects/\(projectID)/queries",
-            payload: request,
+            payload: .json(request),
+            logger: logger,
             responseType: BigQueryQueryResponse.self
         )
 
@@ -140,15 +147,18 @@ public struct BigQuery: Sendable {
     private func getQueryResult(
         jobReference: BigQueryQueryResponse.JobReference,
         pageToken: String,
-        options: QueryOptions
+        options: QueryOptions,
+        logger: Logger?
     ) async throws -> BigQueryQueryResponse {
-        let response = try await authorizedClient.get(
+        let response = try await authorizedClient.execute(
+            method: .GET,
             path: "bigquery/v2/projects/\(jobReference.projectId)/queries/\(jobReference.jobId)",
             queryItems: [
                 .init(name: "pageToken", value: pageToken),
                 options.maxResults.map { .init(name: "maxResults", value: $0.description) },
                 .init(name: "location", value: jobReference.location),
             ].compactMap({ $0 }),
+            logger: logger,
             responseType: BigQueryQueryResponse.self
         )
 
