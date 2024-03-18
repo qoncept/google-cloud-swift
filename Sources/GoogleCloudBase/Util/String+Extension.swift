@@ -1,7 +1,7 @@
 import Foundation
 
 extension String {
-    public var choppingSlashPrefix: String {
+    package var choppingSlashPrefix: String {
         if hasPrefix("/") {
             var ret = self
             ret.removeFirst()
@@ -11,7 +11,7 @@ extension String {
         }
     }
 
-    public var addingSlashSuffix: String {
+    package var addingSlashSuffix: String {
         if hasSuffix("/") {
             return self
         } else {
