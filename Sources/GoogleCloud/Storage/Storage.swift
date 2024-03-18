@@ -22,8 +22,8 @@ public struct Storage: Sendable {
 
         authorizedClient = .init(
             baseURL: baseURL,
-            credential:  credential,
-            httpClient: client.httpClient
+            gcpClient: client,
+            credential: credential
         )
     }
 

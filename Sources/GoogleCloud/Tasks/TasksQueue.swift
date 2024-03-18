@@ -1,4 +1,5 @@
 import AsyncHTTPClient
+import Logging
 import Foundation
 import GoogleCloudBase
 import NIOHTTP1
@@ -27,15 +28,15 @@ public struct TasksQueue: Sendable {
         self.credential = client.credential
         authorizedClient = .init(
             baseURL: defaultAPIEndpoint,
-            credential: credential,
-            httpClient: client.httpClient
+            gcpClient: client
         )
     }
 
     public func create(
         taskID: String? = nil,
         scheduleTime: Date? = nil,
-        request: TasksTask.HttpRequest
+        request: TasksTask.HttpRequest,
+        logger: Logger? = nil
     ) async throws -> TasksTask {
         /// subset of `TasksTask`
         struct Task: Encodable {
@@ -63,13 +64,25 @@ public struct TasksQueue: Sendable {
         let payload = Request(task: task)
         let path = "v2/" + parent + "tasks"
 
-        return try await authorizedClient.post(path: path, payload: payload, responseType: TasksTask.self)
+        return try await authorizedClient.execute(
+            method: .POST,
+            path: path,
+            payload: .json(payload),
+            logger: logger,
+            responseType: TasksTask.self
+        )
     }
 
     public func get(
-        taskID: String
+        taskID: String,
+        logger: Logger? = nil
     ) async throws -> TasksTask {
         let path = "v2/" + parent + "tasks/" + taskID
-        return try await authorizedClient.get(path: path, responseType: TasksTask.self)
+        return try await authorizedClient.execute(
+            method: .GET,
+            path: path,
+            logger: logger,
+            responseType: TasksTask.self
+        )
     }
 }

@@ -1,7 +1,8 @@
-import NIOHTTP1
 import AsyncHTTPClient
 import Foundation
 import GoogleCloudBase
+import Logging
+import NIOHTTP1
 
 extension Auth {
     struct BaseClient {
@@ -22,13 +23,16 @@ extension Auth {
         func get<Response: Decodable>(
             path: String,
             queryItems: [URLQueryItem],
+            logger: Logger?,
             responseType: Response.Type
         ) async throws -> Result<Response, FirebaseAuthError> {
             do {
-                let response = try await authorizedClient.get(
+                let response = try await authorizedClient.execute(
+                    method: .GET,
                     path: makeUserMtgPath(path: path),
-                    headers: makeHeaders(),
                     queryItems: queryItems,
+                    headers: makeHeaders(),
+                    logger: logger,
                     responseType: responseType
                 )
                 return .success(response)
@@ -40,13 +44,16 @@ extension Auth {
         func post<Body: Encodable, Response: Decodable>(
             path: String,
             payload: Body,
+            logger: Logger?,
             responseType: Response.Type
         ) async throws -> Result<Response, FirebaseAuthError> {
             do {
-                let response = try await authorizedClient.post(
+                let response = try await authorizedClient.execute(
+                    method: .POST,
                     path: makeUserMtgPath(path: path),
+                    payload: .json(payload),
                     headers: makeHeaders(),
-                    payload: payload,
+                    logger: logger,
                     responseType: responseType
                 )
                 return .success(response)
