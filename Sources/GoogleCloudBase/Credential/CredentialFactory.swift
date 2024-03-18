@@ -1,8 +1,6 @@
 import AsyncHTTPClient
 import Foundation
 import Logging
-import NIOConcurrencyHelpers
-import NIOCore
 
 public protocol AsyncCredentialFactoryProtocol: Sendable {
     func makeCredential(context: CredentialFactoryContext) async throws -> any Credential
