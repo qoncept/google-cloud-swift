@@ -29,8 +29,8 @@ struct HTTPKeySource {
     private var client: HTTPClient
     private var rotating: AutoRotatingValue<JWTKeyCollection>
 
-    private var willRefreshKeys: NIOLockedValueBox<(() -> ())?>
-    func setWillRefreshKeys(_ c: (() -> ())?) {
+    private var willRefreshKeys: NIOLockedValueBox<(@Sendable () -> ())?>
+    func setWillRefreshKeys(_ c: (@Sendable () -> ())?) {
         willRefreshKeys.withLockedValue { value in
             value = c
         }
@@ -38,7 +38,7 @@ struct HTTPKeySource {
 
     init(client: HTTPClient, clock: some Clock<Duration> = .continuous) {
         self.client = client
-        let willRefreshKeys = NIOLockedValueBox<(() -> ())?>(nil)
+        let willRefreshKeys = NIOLockedValueBox<(@Sendable () -> ())?>(nil)
         self.willRefreshKeys = willRefreshKeys
         self.rotating = AutoRotatingValue(clock: clock) {
             willRefreshKeys.withLockedValue { $0?() }
