@@ -26,7 +26,7 @@ final class HTTPKeySourceTest: XCTestCase {
         let source = makeKeySource()
 
         var refreshCalled = 0
-        await source.setWillRefreshKeys {
+        source.setWillRefreshKeys {
             refreshCalled += 1
         }
 
@@ -65,7 +65,7 @@ final class HTTPKeySourceTest: XCTestCase {
         let source = makeKeySource()
 
         var refreshCalled = 0
-        await source.setWillRefreshKeys {
+        source.setWillRefreshKeys {
             refreshCalled += 1
         }
 
