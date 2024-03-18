@@ -103,7 +103,7 @@ extension SyncCredentialFactory {
             guard let googleApplicationCredential = ProcessInfo.processInfo.environment["GOOGLE_APPLICATION_CREDENTIALS"] else {
                 throw CredentialError(message: "GOOGLE_APPLICATION_CREDENTIALS is not set")
             }
-            return json(fileURL: URL(filePath: googleApplicationCredential))
+            return json(fileURL: URL(fileURLWithPath: googleApplicationCredential))
         }
     }
 
