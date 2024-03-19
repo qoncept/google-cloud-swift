@@ -2,6 +2,7 @@ import AsyncHTTPClient
 import Foundation
 import GoogleCloudBase
 import Logging
+import NIOCore
 import NIOHTTP1
 import NIOPosix
 
@@ -50,9 +51,10 @@ public struct BigQuery: Sendable {
         _ query: BigQueryQueryString,
         options: QueryOptions = QueryOptions(),
         decoding rowType: Row.Type,
+        timeout: TimeAmount = .seconds(60),
         logger: Logger? = nil
     ) async throws -> [Row] {
-        return try await queryStream(query, options: options, decoding: rowType, logger: logger)
+        return try await queryStream(query, options: options, decoding: rowType, timeout: timeout, logger: logger)
             .reduce(into: [], { $0.append(contentsOf: $1) })
     }
 
@@ -60,6 +62,7 @@ public struct BigQuery: Sendable {
         _ query: BigQueryQueryString,
         options: QueryOptions = QueryOptions(),
         decoding rowType: Row.Type,
+        timeout: TimeAmount = .seconds(60),
         logger: Logger? = nil
     ) -> AsyncThrowingStream<[Row], any Error> {
         return AsyncThrowingStream([Row].self, bufferingPolicy: .unbounded) { (continuetion) in
@@ -78,7 +81,12 @@ public struct BigQuery: Sendable {
                         }
                     }
 
-                    let response = try await queryInternal(query, options: options, logger: logger)
+                    let response = try await queryInternal(
+                        query,
+                        options: options,
+                        timeout: timeout,
+                        logger: logger
+                    )
 
                     var nextPageToken: String? = response.pageToken
                     var nextRows: BigQueryQueryResponse = response
@@ -92,6 +100,7 @@ public struct BigQuery: Sendable {
                                 jobReference: response.jobReference,
                                 pageToken: pageToken,
                                 options: options,
+                                timeout: timeout,
                                 logger: logger
                             )
                             
@@ -121,6 +130,7 @@ public struct BigQuery: Sendable {
     private func queryInternal(
         _ query: BigQueryQueryString,
         options: QueryOptions = QueryOptions(),
+        timeout: TimeAmount,
         logger: Logger?
     ) async throws -> BigQueryQueryResponse {
         let (query, binds) = BigQueryDataTranslation.encode(query)
@@ -133,6 +143,7 @@ public struct BigQuery: Sendable {
             method: .POST,
             path: "bigquery/v2/projects/\(projectID)/queries",
             payload: .json(request),
+            timeout: timeout,
             logger: logger,
             responseType: BigQueryQueryResponse.self
         )
@@ -148,6 +159,7 @@ public struct BigQuery: Sendable {
         jobReference: BigQueryQueryResponse.JobReference,
         pageToken: String,
         options: QueryOptions,
+        timeout: TimeAmount,
         logger: Logger?
     ) async throws -> BigQueryQueryResponse {
         let response = try await authorizedClient.execute(
@@ -158,6 +170,7 @@ public struct BigQuery: Sendable {
                 options.maxResults.map { .init(name: "maxResults", value: $0.description) },
                 .init(name: "location", value: jobReference.location),
             ].compactMap({ $0 }),
+            timeout: timeout,
             logger: logger,
             responseType: BigQueryQueryResponse.self
         )

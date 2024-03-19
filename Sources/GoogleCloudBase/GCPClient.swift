@@ -25,7 +25,7 @@ public struct GCPClient: Sendable {
         func build() -> (HTTPClient, compressionEnabled: Bool) {
             let httpClientConfig = AsyncHTTPClient.HTTPClient.Configuration(
                 timeout: .init(connect: .seconds(10)),
-                decompression: .enabled(limit: .ratio(20))
+                decompression: .enabled(limit: .none) // INFO: decompression limit has serious bug so not usable. https://github.com/apple/swift-nio-extras/pull/221
             )
             switch self {
             case .shared(let providedHTTPClient):
