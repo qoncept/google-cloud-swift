@@ -78,6 +78,7 @@ public struct GCPClient: Sendable {
         )
     }
 
+    @_disfavoredOverload
     public init(
         credentialFactory: some AsyncCredentialFactoryProtocol = .applicationDefault,
         options: Options = Options(),
