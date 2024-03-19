@@ -79,7 +79,7 @@ public struct GCPClient: Sendable {
     }
 
     public init(
-        credentialFactory: AsyncCredentialFactory = .applicationDefault,
+        credentialFactory: some AsyncCredentialFactoryProtocol = .applicationDefault,
         options: Options = Options(),
         httpClientProvider: HTTPClientProvider = .createNew,
         logger clientLogger: Logger = Self.loggingDisabled

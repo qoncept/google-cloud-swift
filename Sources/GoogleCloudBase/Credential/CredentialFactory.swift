@@ -151,7 +151,7 @@ extension SyncCredentialFactory {
     }
 }
 
-extension AsyncCredentialFactory {
+extension AsyncCredentialFactoryProtocol where Self == AsyncCredentialFactory {
     public static var applicationDefault: AsyncCredentialFactory {
 #if os(Linux)
         return selector(SyncCredentialFactory.environment, SyncCredentialFactory.configFile, computeEngine)
@@ -160,7 +160,7 @@ extension AsyncCredentialFactory {
 #endif
     }
 
-    public static func custom(_ factory: @Sendable @escaping (Context) async throws -> any Credential) ->  AsyncCredentialFactory {
+    public static func custom(_ factory: @Sendable @escaping (CredentialFactoryContext) async throws -> any Credential) ->  AsyncCredentialFactory {
         AsyncCredentialFactory(cb: factory)
     }
 
