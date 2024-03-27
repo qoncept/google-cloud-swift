@@ -22,24 +22,27 @@ public struct GCPClient: Sendable {
         case createNewWithEventLoopGroup(any EventLoopGroup)
         case createNew
 
-        func build() -> (HTTPClient, compressionEnabled: Bool) {
-            let httpClientConfig = AsyncHTTPClient.HTTPClient.Configuration(
+        func build(logger: Logger?) -> (HTTPClient, compressionEnabled: Bool) {
+            var httpClientConfig = AsyncHTTPClient.HTTPClient.Configuration(
                 timeout: .init(connect: .seconds(10)),
                 decompression: .enabled(limit: .none) // INFO: decompression limit has serious bug so not usable. https://github.com/apple/swift-nio-extras/pull/221
             )
+            httpClientConfig.httpVersion = .http1Only // INFO: AHC or NIO may be wrong somewhere and sometimes not correctly handle gziped responses in http/2
             switch self {
             case .shared(let providedHTTPClient):
                 return (providedHTTPClient, false)
             case .createNewWithEventLoopGroup(let elg):
                 let httpClient = AsyncHTTPClient.HTTPClient(
                     eventLoopGroupProvider: .shared(elg),
-                    configuration: httpClientConfig
+                    configuration: httpClientConfig,
+                    backgroundActivityLogger: logger ?? GCPClient.loggingDisabled
                 )
                 return (httpClient, true)
             case .createNew:
                 let httpClient = AsyncHTTPClient.HTTPClient(
                     eventLoopGroupProvider: .singleton,
-                    configuration: httpClientConfig
+                    configuration: httpClientConfig,
+                    backgroundActivityLogger: logger ?? GCPClient.loggingDisabled
                 )
                 return (httpClient, true)
             }
@@ -70,7 +73,7 @@ public struct GCPClient: Sendable {
         logger clientLogger: Logger = Self.loggingDisabled
     ) throws {
         self.httpClientProvider = httpClientProvider
-        (httpClient, httpClientCompressionEnabled) = httpClientProvider.build()
+        (httpClient, httpClientCompressionEnabled) = httpClientProvider.build(logger: clientLogger)
         self.clientLogger = clientLogger
         self.options = options
         self.credential = try credentialFactory.makeCredential(
@@ -86,7 +89,7 @@ public struct GCPClient: Sendable {
         logger clientLogger: Logger = Self.loggingDisabled
     ) async throws {
         self.httpClientProvider = httpClientProvider
-        (httpClient, httpClientCompressionEnabled) = httpClientProvider.build()
+        (httpClient, httpClientCompressionEnabled) = httpClientProvider.build(logger: clientLogger)
         self.clientLogger = clientLogger
         self.options = options
         self.credential = try await credentialFactory.makeCredential(
