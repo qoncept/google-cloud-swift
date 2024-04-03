@@ -12,7 +12,7 @@ struct AuthError: Error, CustomStringConvertible, LocalizedError {
     var errorDescription: String? { message }
 }
 
-public struct Auth {
+public struct Auth: Sendable {
     public static let productionBaseURL: URL = URL(string: "https://identitytoolkit.googleapis.com/v1")!
 
     public static let emulatorHostEnvVar = "FIREBASE_AUTH_EMULATOR_HOST"

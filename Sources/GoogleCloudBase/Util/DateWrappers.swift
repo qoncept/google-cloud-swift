@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - RFC3339Z
 
-struct RFC3339ZDateBase: Codable {
+struct RFC3339ZDateBase: Codable, Sendable {
     var value: Date
     init(value: Date) {
         self.value = value
@@ -34,7 +34,7 @@ struct RFC3339ZDateBase: Codable {
     }
 }
 
-@propertyWrapper public struct RFC3339ZDate: Codable {
+@propertyWrapper public struct RFC3339ZDate: Codable, Sendable {
     public init(wrappedValue: Date) {
         self.innerValue = .init(value: wrappedValue)
     }
@@ -55,7 +55,7 @@ struct RFC3339ZDateBase: Codable {
     }
 }
 
-@propertyWrapper public struct RFC3339ZOptionalDate: Codable {
+@propertyWrapper public struct RFC3339ZOptionalDate: Codable, Sendable {
     public init(wrappedValue: Date?) {
         self.innerValue = wrappedValue.map { .init(value: $0) }
     }
@@ -86,7 +86,7 @@ extension KeyedDecodingContainer {
 
 // MARK: - StringMilliUnix
 
-struct StringMilliUnixDateBase: Codable {
+struct StringMilliUnixDateBase: Codable, Sendable {
     var value: Date
     init(value: Date) {
         self.value = value
@@ -108,7 +108,7 @@ struct StringMilliUnixDateBase: Codable {
 }
 
 
-@propertyWrapper public struct StringMilliUnixDate: Codable {
+@propertyWrapper public struct StringMilliUnixDate: Codable, Sendable {
     public init(wrappedValue: Date) {
         self.innerValue = .init(value: wrappedValue)
     }
@@ -129,7 +129,7 @@ struct StringMilliUnixDateBase: Codable {
     }
 }
 
-@propertyWrapper public struct StringMilliUnixOptionalDate: Codable {
+@propertyWrapper public struct StringMilliUnixOptionalDate: Codable, Sendable {
     public init(wrappedValue: Date?) {
         self.innerValue = wrappedValue.map { .init(value: $0) }
     }
