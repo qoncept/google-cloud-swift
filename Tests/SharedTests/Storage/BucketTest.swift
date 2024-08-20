@@ -3,7 +3,9 @@ import NIOPosix
 import XCTest
 
 final class BucketTest: XCTestCase {
-    private static let client = AsyncHTTPClient.HTTPClient(eventLoopGroupProvider: .singleton)
+    private static let client = try! GCPClient(credentialFactory: .custom { _ in
+        MockCredential()
+    })
 
     override class func setUp() {
         super.setUp()
@@ -26,10 +28,7 @@ final class BucketTest: XCTestCase {
     }
 
     private func makeBucket() -> Bucket {
-        Storage(
-            credentialStore: CredentialStore(credential: MockCredential()),
-            client: Self.client
-        )
+        Storage(client: Self.client)
             .bucket(name: "test-bucket")
     }
 

@@ -2,6 +2,7 @@ import AsyncHTTPClient
 import Foundation
 import GoogleCloudBase
 import JWTKit
+import Logging
 
 // INFO: https://github.com/firebase/firebase-admin-node/blob/master/src/auth/auth-api-request.ts
 
@@ -11,7 +12,7 @@ struct AuthError: Error, CustomStringConvertible, LocalizedError {
     var errorDescription: String? { message }
 }
 
-public struct Auth {
+public struct Auth: Sendable {
     public static let productionBaseURL: URL = URL(string: "https://identitytoolkit.googleapis.com/v1")!
 
     public static let emulatorHostEnvVar = "FIREBASE_AUTH_EMULATOR_HOST"
@@ -34,8 +35,8 @@ public struct Auth {
         return URL(string: "http://\(host)/emulator/v1")
     }
 
-    private static func projectID(from credentialStore: CredentialStore) -> String? {
-        guard let richCredential = credentialStore.compilersafeCredential as? any RichCredential else {
+    private static func projectID(from credential: any Credential) -> String? {
+        guard let richCredential = credential as? any RichCredential else {
             return nil
         }
         return richCredential.projectID
@@ -45,24 +46,22 @@ public struct Auth {
     private let keySource: HTTPKeySource
 
     public init(
-        credentialStore: CredentialStore,
-        client: AsyncHTTPClient.HTTPClient,
+        client: GCPClient,
         baseURL paramBaseURL: URL? = nil,
         projectID paramProjectID: String? = nil
     ) throws {
-        var credentialStore = credentialStore
+        var credential = client.credential
         var baseURL: URL
-        let projectID: String? = paramProjectID ??
-            Self.projectID(from: credentialStore)
+        guard let projectID = paramProjectID ?? Self.projectID(from: credential) else {
+            throw AuthError(message: "projectID must be provided if the credential doesn't have it.")
+        }
 
         if let paramBaseURL {
             baseURL = paramBaseURL
         } else {
             if let emulator = Self.emulatorBaseURL() {
                 baseURL = emulator
-                credentialStore = CredentialStore(
-                    credential: .makeEmulatorCredential()
-                )
+                credential = EmulatorCredential()
             } else {
                 baseURL = Self.productionBaseURL
             }
@@ -70,38 +69,17 @@ public struct Auth {
 
         let authorizedClient = AuthorizedClient(
             baseURL: baseURL,
-            credentialStore: credentialStore,
-            httpClient: client
+            gcpClient: client,
+            credential: credential
         )
-
-        try self.init(
-            authorizedClient: authorizedClient,
-            projectID: projectID
-        )
-    }
-
-    public init(
-        authorizedClient: AuthorizedClient,
-        projectID paramProjectID: String? = nil
-    ) throws {
-        let projectID: String
-        if let paramProjectID {
-            projectID = paramProjectID
-        } else if let id = Self.projectID(from: authorizedClient.credentialStore) {
-            projectID = id
-        } else {
-            throw AuthError(message: "projectID must be provided if the credential doesn't have it.")
-        }
 
         baseClient = BaseClient(
             authorizedClient: authorizedClient,
             projectID: projectID,
             tenantID: nil
         )
-        keySource = HTTPKeySource(client: authorizedClient.httpClient)
+        keySource = HTTPKeySource(client: client.httpClient)
     }
-
-    public var authorizedClient: AuthorizedClient { baseClient.authorizedClient }
     
     public var projectID: String { baseClient.projectID }
 
@@ -115,7 +93,7 @@ public struct Auth {
     }
 
     public func isExpired(_ idToken: String) throws -> Bool {
-        let unverifiedToken = try JWTSigners().unverified(idToken, as: FirebaseAuthToken.self)
+        let unverifiedToken = try DefaultJWTParser().parse([UInt8](idToken.utf8), as: FirebaseAuthToken.self).payload
         do {
             try unverifiedToken.expires.verifyNotExpired()
             return false
@@ -125,40 +103,53 @@ public struct Auth {
     }
 
     public func verifyIdToken(_ idToken: String) async throws -> FirebaseAuthToken {
-        let token = try await keySource.withPublicKeys { signers in
-            try signers.verify(idToken, as: FirebaseAuthToken.self)
-        }
+        let token = try await keySource.publicKeys().verify(idToken, as: FirebaseAuthToken.self)
         try token.audience.verifyIntendedAudience(includes: projectID)
         return token
     }
 
-    public func createUser(_ user: UserToCreate) async throws -> Result<String, CreateUserError> {
+    public func createUser(
+        _ user: UserToCreate,
+        logger: Logger? = nil
+    ) async throws -> Result<String, CreateUserError> {
         switch user.validatedRequest() {
         case .failure(let e): return .failure(e)
         case .success: break
         }
         let path = "/accounts"
-        let res = try await baseClient.post(path: path, payload: user, responseType: UpdateUserResponse.self)
+        let res = try await baseClient.post(path: path, payload: user, logger: logger, responseType: UpdateUserResponse.self)
         return try res.map { $0.localId }.tryMapError { try CreateUserError($0) }
     }
 
-    public func user(for uid: String) async throws -> UserRecord? {
-        return try await user(request: .init(localId: [uid]))
+    public func user(
+        for uid: String,
+        logger: Logger? = nil
+    ) async throws -> UserRecord? {
+        return try await user(request: .init(localId: [uid]), logger: logger)
     }
 
-    public func user(byEmail email: String) async throws -> UserRecord? {
-        return try await user(request: .init(email: [email]))
+    public func user(
+        byEmail email: String,
+        logger: Logger? = nil
+    ) async throws -> UserRecord? {
+        return try await user(request: .init(email: [email]), logger: logger)
     }
 
-    private func user(request: GetUserRequest) async throws -> UserRecord? {
+    private func user(
+        request: GetUserRequest,
+        logger: Logger?
+    ) async throws -> UserRecord? {
         let path = "/accounts:lookup"
         let res = try await baseClient.post(
-            path: path, payload: request, responseType: GetUserResponse.self
+            path: path, payload: request, logger: logger, responseType: GetUserResponse.self
         ).get()
         return res.users?.first
     }
 
-    public func users(for queries: [UserIdentityQuery]) async throws -> [UserRecord] {
+    public func users(
+        for queries: [UserIdentityQuery],
+        logger: Logger? = nil
+    ) async throws -> [UserRecord] {
         if queries.isEmpty { return [] }
         
         let path = "/accounts:lookup"
@@ -167,11 +158,15 @@ public struct Auth {
             request.append(query: query)
         }
         return try await baseClient.post(
-            path: path, payload: request, responseType: GetUsersResponse.self
+            path: path, payload: request, logger: logger, responseType: GetUsersResponse.self
         ).get().users ?? []
     }
 
-    public func updateUser(_ properties: UpdateUserProperties, for uid: String) async throws -> Result<Void, UpdateUserError> {
+    public func updateUser(
+        _ properties: UpdateUserProperties,
+        for uid: String,
+        logger: Logger? = nil
+    ) async throws -> Result<Void, UpdateUserError> {
         switch properties.validate() {
         case .failure(let error): return .failure(error)
         case .success: break
@@ -180,13 +175,17 @@ public struct Auth {
         let path = "/accounts:update"
 
         let ret = try await baseClient.post(
-            path: path, payload: properties.toRaw(uid: uid), responseType: UpdateUserResponse.self
+            path: path, payload: properties.toRaw(uid: uid), logger: logger, responseType: UpdateUserResponse.self
         )
 
         return try ret.map { (_) in () }.tryMapError { try UpdateUserError($0) }
     }
 
-    public func setCustomUserClaims(_ claims: [String: String], for uid: String) async throws {
+    public func setCustomUserClaims(
+        _ claims: [String: String],
+        for uid: String,
+        logger: Logger? = nil
+    ) async throws {
         struct Request: Encodable {
             var localId: String
             var customAttributes: String
@@ -199,10 +198,13 @@ public struct Auth {
         }
 
         let path = "/accounts:update"
-        _ = try await baseClient.post(path: path, payload: payload, responseType: Response.self)
+        _ = try await baseClient.post(path: path, payload: payload, logger: logger, responseType: Response.self)
     }
 
-    public func deleteUser(for uid: String) async throws {
+    public func deleteUser(
+        for uid: String,
+        logger: Logger? = nil
+    ) async throws {
         struct Request: Encodable {
             var localId: String /// UID
         }
@@ -211,10 +213,14 @@ public struct Auth {
         struct Response: Decodable {}
 
         let path = "/accounts:delete"
-        _ = try await baseClient.post(path: path, payload: payload, responseType: Response.self)
+        _ = try await baseClient.post(path: path, payload: payload, logger: logger, responseType: Response.self)
     }
 
-    public func listUsers(pageSize: Int?, pageToken: String?) async throws -> Result<ListUserResult, FirebaseAuthError> {
+    public func listUsers(
+        pageSize: Int?,
+        pageToken: String?,
+        logger: Logger? = nil
+    ) async throws -> Result<ListUserResult, FirebaseAuthError> {
         var queryItems: [URLQueryItem] = [
             .init(name: "maxResults", value: (pageSize ?? 1000).description)
         ]
@@ -224,6 +230,7 @@ public struct Auth {
         return try await baseClient.get(
             path: "/accounts:batchGet",
             queryItems: queryItems,
+            logger: logger,
             responseType: ListUserResult.self
         )
     }

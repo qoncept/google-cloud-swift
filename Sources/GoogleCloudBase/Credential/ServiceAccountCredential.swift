@@ -24,40 +24,43 @@ private struct ServiceAccount: Decodable {
 }
 
 struct ServiceAccountCredential: RichCredential, Sendable {
-    let projectID: String
-    private let privateKey: String
+    var projectID: String
     let clientEmail: String
+    private let privateKey: _RSA.Signing.PrivateKey
+    let accessToken: AutoRotatingValue<AccessToken>
 
-    private let httpClient: AsyncHTTPClient.HTTPClient
-    private let clock: any Clock
-
-    init(credentialsFileData: Data, httpClient: AsyncHTTPClient.HTTPClient, clock: any Clock = .default) throws {
+    init(credentialsFileData: Data, httpClient: AsyncHTTPClient.HTTPClient) throws {
         let serviceAccount = try JSONDecoder().decode(ServiceAccount.self, from: credentialsFileData)
         projectID = serviceAccount.projectID
-        privateKey = serviceAccount.privateKey
         clientEmail = serviceAccount.clientEmail
+        privateKey = try _RSA.Signing.PrivateKey(pemRepresentation: serviceAccount.privateKey)
+        let key = try Insecure.RSA.PrivateKey(backing: privateKey)
+        let signerTask = Task {
+            await JWTKeyCollection().addRS256(key: key)
+        }
 
-        self.httpClient = httpClient
-        self.clock = clock
+        self.accessToken = .init {
+            let signer = await signerTask.value
+            let jwt = try await Self.makeAuthJWT(clientEmail: serviceAccount.clientEmail, signer: signer)
+            let postData = "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=\(jwt)"
+
+            var req = HTTPClientRequest(url: "https://\(googleAuthTokenHost)/\(googleAuthTokenPath)")
+            req.method = .POST
+            req.headers = [
+                "Content-Type": "application/x-www-form-urlencoded",
+            ]
+            req.body = .bytes(.init(string: postData))
+
+            let token = try await Self.requestAccessToken(httpClient: httpClient, request: req)
+            return (token.accessToken, .seconds(token.exipresIn) - .tokenExpiryThreshold)
+        }
     }
 
-    func getAccessToken() async throws -> GoogleOAuthAccessToken {
-        let jwt = try makeAuthJWT()
-        let postData = "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=\(jwt)"
-
-        let req = try HTTPClient.Request(
-            url: URL(string: "https://\(googleAuthTokenHost)/\(googleAuthTokenPath)")!,
-            method: .POST,
-            headers: HTTPHeaders([
-                ("Content-Type", "application/x-www-form-urlencoded"),
-            ]),
-            body: .string(postData)
-        )
-
-        return try await Self.requestAccessToken(httpClient: httpClient, request: req)
+    func getAccessToken() async throws -> AccessToken {
+        return try await accessToken.getValue()
     }
 
-    private func makeAuthJWT() throws -> String {
+    private static func makeAuthJWT(clientEmail: String, signer: JWTKeyCollection) async throws -> String {
         let scope = [
             "https://www.googleapis.com/auth/cloud-platform",
             "https://www.googleapis.com/auth/firebase.database",
@@ -66,7 +69,7 @@ struct ServiceAccountCredential: RichCredential, Sendable {
             "https://www.googleapis.com/auth/userinfo.email",
         ].joined(separator: " ")
 
-        let now = clock.now()
+        let now = Date()
         let jwtPayload = AuthPayload(
             aud: .init(value: googleTokenAudience),
             exp: .init(value: now + 60 * 60),
@@ -75,13 +78,11 @@ struct ServiceAccountCredential: RichCredential, Sendable {
             scope: scope
         )
 
-        let signer = try JWTSigner.rs256(key: RSAKey.private(pem: privateKey))
-        return try signer.sign(jwtPayload)
+        return try await signer.sign(jwtPayload)
     }
 
     func sign(data: Data) async throws -> Data {
-        let key = try _RSA.Signing.PrivateKey(pemRepresentation: privateKey)
-        let signature = try key.signature(for: SHA256.hash(data: data), padding: .insecurePKCS1v1_5)
+        let signature = try privateKey.signature(for: SHA256.hash(data: data), padding: .insecurePKCS1v1_5)
         return signature.rawRepresentation
     }
 }
@@ -93,7 +94,7 @@ private struct AuthPayload: JWTPayload {
     var iat: IssuedAtClaim
     var scope: String
 
-    func verify(using signer: JWTSigner) throws {
+    func verify(using algorithm: any JWTAlgorithm) throws {
         fatalError("send only payload")
     }
 }

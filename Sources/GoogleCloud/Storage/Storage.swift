@@ -8,28 +8,22 @@ private let defaultAPIEndpoint = URL(string: "https://storage.googleapis.com/")!
 /// for Firebaseではない、生のCloud Storageを表す
 /// ただしエミュレータにはFirebaseのものを使用している
 public struct Storage: Sendable {
-    private let credentialStore: CredentialStore
-
     private let authorizedClient: AuthorizedClient
-    public init(
-        credentialStore: CredentialStore,
-        client: AsyncHTTPClient.HTTPClient
-    ) {
-        var credentialStore = credentialStore
+    public init(client: GCPClient) {
+        var credential = client.credential
         let baseURL: URL
 
         if let emulatorHost = ProcessInfo.processInfo.environment[storageEmulatorHostEnvVar] {
             baseURL = URL(string: "http://\(emulatorHost)/")!
-            credentialStore = CredentialStore(credential: .makeEmulatorCredential())
+            credential = EmulatorCredential()
         } else {
             baseURL = defaultAPIEndpoint
         }
 
-        self.credentialStore = credentialStore
         authorizedClient = .init(
             baseURL: baseURL,
-            credentialStore: credentialStore,
-            httpClient: client
+            gcpClient: client,
+            credential: credential
         )
     }
 

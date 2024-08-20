@@ -1,6 +1,6 @@
 // INFO: https://cloud.google.com/bigquery/docs/reference/standard-sql/data-types#numeric_types
 
-public enum BigQueryDataType: String, CaseIterable, Codable {
+public enum BigQueryDataType: String, CaseIterable, Codable, Sendable {
     case array = "ARRAY"
     case bignumeric = "BIGNUMERIC"
     case bool = "BOOL"

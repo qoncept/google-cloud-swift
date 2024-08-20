@@ -4,7 +4,7 @@ import NIOHTTP1
 
 // INFO: https://cloud.google.com/tasks/docs/reference/rest/v2/projects.locations.queues.tasks#resource:-task
 
-public struct TasksTask: Decodable {
+public struct TasksTask: Decodable, Sendable {
     /// must be the following format: `projects/PROJECT_ID/locations/LOCATION_ID/queues/QUEUE_ID/tasks/TASK_ID`
     public var name: String
 
@@ -14,7 +14,7 @@ public struct TasksTask: Decodable {
     public var dispatchCount: Int?
     public var responseCount: Int?
 
-    public struct Attempt: Decodable {
+    public struct Attempt: Decodable, Sendable {
         @RFC3339ZOptionalDate public var dispatchTime: Date?
     }
     public var firstAttempt: Attempt?
@@ -22,7 +22,7 @@ public struct TasksTask: Decodable {
     public var view: TasksResponseView
 
 //    var appEngineHttpRequest: Never? // unsupported
-    public struct HttpRequest: Codable {
+    public struct HttpRequest: Codable, Sendable {
         public init(url: String, httpMethod: String, headers: [String : String]? = nil, body: String, oauthToken: TasksTask.HttpRequest.OAuthToken? = nil, oidcToken: TasksTask.HttpRequest.OidcToken? = nil) {
             self.url = url
             self.httpMethod = httpMethod
@@ -36,12 +36,12 @@ public struct TasksTask: Decodable {
         public var httpMethod: String
         public var headers: [String: String]?
         public var body: String? /// base64 encoded. ommited depends by TaskResponseView
-        public struct OAuthToken: Codable {
+        public struct OAuthToken: Codable, Sendable {
             public var serviceAccountEmail: String
             public var scope: String?
         }
         public var oauthToken: OAuthToken?
-        public struct OidcToken: Codable {
+        public struct OidcToken: Codable, Sendable {
             public var serviceAccountEmail: String
             public var audience: String?
         }

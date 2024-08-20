@@ -1,17 +1,15 @@
 import Foundation
 
-struct EmulatorCredential: RichCredential & Sendable {
-    func getAccessToken() async throws -> GoogleOAuthAccessToken {
-        GoogleOAuthAccessToken(
-            accessToken: "owner",
-            exipresIn: 3600
-        )
+package struct EmulatorCredential: RichCredential & Sendable {
+    package init() {}
+    package func getAccessToken() async throws -> AccessToken {
+        AccessToken("owner")
     }
 
-    var clientEmail: String { "owner@example.com" }
-    var projectID: String { "testing-project-id" }
+    package var clientEmail: String { "owner@example.com" }
+    package var projectID: String { "testing-project-id" }
 
-    func sign(data: Data) async throws -> Data {
+    package func sign(data: Data) async throws -> Data {
         data
     }
 }

@@ -1,4 +1,5 @@
 import AsyncHTTPClient
+import Logging
 import Foundation
 import GoogleCloudBase
 import NIOHTTP1
@@ -6,42 +7,36 @@ import NIOHTTP1
 private let defaultAPIEndpoint = URL(string: "https://cloudtasks.googleapis.com/")!
 
 public struct TasksQueue: Sendable {
-    private let credentialStore: CredentialStore
+    private let credential: any Credential
     private let authorizedClient: AuthorizedClient
     private let parent: String
 
     public init(
+        client: GCPClient,
         projectID: String,
         location: String,
-        name: String,
-        credentialStore: CredentialStore,
-        client: AsyncHTTPClient.HTTPClient
+        name: String
     ) {
         self.init(
-            id: "projects/\(projectID)/locations/\(location)/queues/\(name)",
-            credentialStore: credentialStore,
-            client: client
+            client: client,
+            id: "projects/\(projectID)/locations/\(location)/queues/\(name)"
         )
     }
 
-    public init(
-        id: String,
-        credentialStore: CredentialStore,
-        client: AsyncHTTPClient.HTTPClient
-    ) {
+    public init(client: GCPClient, id: String) {
         parent = id.addingSlashSuffix.choppingSlashPrefix
-        self.credentialStore = credentialStore
+        self.credential = client.credential
         authorizedClient = .init(
             baseURL: defaultAPIEndpoint,
-            credentialStore: credentialStore,
-            httpClient: client
+            gcpClient: client
         )
     }
 
     public func create(
         taskID: String? = nil,
         scheduleTime: Date? = nil,
-        request: TasksTask.HttpRequest
+        request: TasksTask.HttpRequest,
+        logger: Logger? = nil
     ) async throws -> TasksTask {
         /// subset of `TasksTask`
         struct Task: Encodable {
@@ -56,7 +51,7 @@ public struct TasksQueue: Sendable {
 
         var request = request
         if request.oidcToken == nil && request.oauthToken == nil {
-            if let serviceAccountEmail = (credentialStore.compilersafeCredential as? (any RichCredential))?.clientEmail {
+            if let serviceAccountEmail = (credential as? (any RichCredential))?.clientEmail {
                 request.oidcToken = .init(serviceAccountEmail: serviceAccountEmail, audience: nil)
             }
         }
@@ -69,13 +64,25 @@ public struct TasksQueue: Sendable {
         let payload = Request(task: task)
         let path = "v2/" + parent + "tasks"
 
-        return try await authorizedClient.post(path: path, payload: payload, responseType: TasksTask.self)
+        return try await authorizedClient.execute(
+            method: .POST,
+            path: path,
+            payload: .json(payload),
+            logger: logger,
+            responseType: TasksTask.self
+        )
     }
 
     public func get(
-        taskID: String
+        taskID: String,
+        logger: Logger? = nil
     ) async throws -> TasksTask {
         let path = "v2/" + parent + "tasks/" + taskID
-        return try await authorizedClient.get(path: path, responseType: TasksTask.self)
+        return try await authorizedClient.execute(
+            method: .GET,
+            path: path,
+            logger: logger,
+            responseType: TasksTask.self
+        )
     }
 }

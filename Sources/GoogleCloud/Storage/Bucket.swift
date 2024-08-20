@@ -1,4 +1,5 @@
 import AsyncHTTPClient
+import Logging
 import Foundation
 import GoogleCloudBase
 
@@ -6,29 +7,39 @@ public struct Bucket: Sendable {
     public let bucketName: String
     private let authorizedClient: AuthorizedClient
 
-    init(name: String, authorizedClient: AuthorizedClient) {
+    internal init(name: String, authorizedClient: AuthorizedClient) {
         self.bucketName = name
         self.authorizedClient = authorizedClient
     }
 
     // INFO: https://cloud.google.com/storage/docs/json_api/v1/objects/list
-    public func files(prefix: String) async throws -> [StorageFile] {
-        return try await authorizedClient.get(
+    public func files(
+        prefix: String,
+        logger: Logger? = nil
+    ) async throws -> [StorageFile] {
+        return try await authorizedClient.execute(
+            method: .GET,
             path: "storage/v1/b/\(bucketName)/o",
             queryItems: [
                 URLQueryItem(name: "autoPaginate", value: "false"),
                 URLQueryItem(name: "delimiter", value: "/"),
                 URLQueryItem(name: "prefix", value: prefix),
             ],
+            logger: logger,
             responseType: ObjectsListResponse.self
         ).items ?? []
     }
 
     // INFO: https://cloud.google.com/storage/docs/json_api/v1/objects/delete
-    public func delete(name: String) async throws {
+    public func delete(
+        name: String,
+        logger: Logger? = nil
+    ) async throws {
         let name = Self.nameOnPath(name: name)
-        try await authorizedClient.delete(
-            path: "storage/v1/b/\(bucketName)/o" + (name.hasPrefix("/") ? name : "/" + name)
+        _ = try await authorizedClient.execute(
+            method: .DELETE,
+            path: "storage/v1/b/\(bucketName)/o" + (name.hasPrefix("/") ? name : "/" + name),
+            logger: logger
         )
     }
 
@@ -39,17 +50,24 @@ public struct Bucket: Sendable {
         }
     }
 
-    public func uploadSimple(name: String, media: Data, contentType: String? = nil) async throws -> StorageFile {
-        return try await authorizedClient.post(
+    public func uploadSimple(
+        name: String,
+        media: Data,
+        contentType: String? = nil,
+        logger: Logger? = nil
+    ) async throws -> StorageFile {
+        return try await authorizedClient.execute(
+            method: .POST,
             path: "upload/storage/v1/b/\(bucketName)/o",
-            headers: [
-                "Content-Type": contentType ?? Mimetype.detect(name)
-            ],
             queryItems: [
                 URLQueryItem(name: "name", value: name),
                 URLQueryItem(name: "uploadType", value: "media"),
             ],
-            payload: media,
+            payload: .data(media),
+            headers: [
+                "Content-Type": contentType ?? Mimetype.detect(name)
+            ],
+            logger: logger,
             responseType: StorageFile.self
         )
     }

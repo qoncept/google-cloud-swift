@@ -1,6 +1,8 @@
 import AsyncHTTPClient
 import Foundation
 import GoogleCloudBase
+import Logging
+import NIOCore
 import NIOHTTP1
 import NIOPosix
 
@@ -9,32 +11,29 @@ private let defaultAPIEndpoint = URL(string: "https://bigquery.googleapis.com/")
 
 public struct BigQuery: Sendable {
     public var projectID: String
-    private let credentialStore: CredentialStore
     private var authorizedClient: AuthorizedClient
     public var threadPool: NIOThreadPool
 
     public init(
+        client: GCPClient,
         projectID: String,
-        credentialStore: CredentialStore,
-        client: AsyncHTTPClient.HTTPClient,
         threadPool: NIOThreadPool = NIOThreadPool.singleton
     ) {
         self.projectID = projectID
 
-        var credentialStore = credentialStore
+        var credential = client.credential
         let baseURL: URL
         if let emulatorHost = ProcessInfo.processInfo.environment[bigqueryEmulatorHostEnvVar] {
             baseURL = URL(string: "http://\(emulatorHost)/")!
-            credentialStore = CredentialStore(credential: .makeEmulatorCredential())
+            credential = EmulatorCredential()
         } else {
             baseURL = defaultAPIEndpoint
         }
 
-        self.credentialStore = credentialStore
         authorizedClient = .init(
             baseURL: baseURL,
-            credentialStore: credentialStore,
-            httpClient: client
+            gcpClient: client,
+            credential: credential
         )
         self.threadPool = threadPool
     }
@@ -51,16 +50,20 @@ public struct BigQuery: Sendable {
     public func query<Row: Decodable>(
         _ query: BigQueryQueryString,
         options: QueryOptions = QueryOptions(),
-        decoding rowType: Row.Type
+        decoding rowType: Row.Type,
+        timeout: TimeAmount = .seconds(60),
+        logger: Logger? = nil
     ) async throws -> [Row] {
-        return try await queryStream(query, options: options, decoding: rowType)
+        return try await queryStream(query, options: options, decoding: rowType, timeout: timeout, logger: logger)
             .reduce(into: [], { $0.append(contentsOf: $1) })
     }
 
     public func queryStream<Row: Decodable>(
         _ query: BigQueryQueryString,
         options: QueryOptions = QueryOptions(),
-        decoding rowType: Row.Type
+        decoding rowType: Row.Type,
+        timeout: TimeAmount = .seconds(60),
+        logger: Logger? = nil
     ) -> AsyncThrowingStream<[Row], any Error> {
         return AsyncThrowingStream([Row].self, bufferingPolicy: .unbounded) { (continuetion) in
             let task = Task {
@@ -78,7 +81,12 @@ public struct BigQuery: Sendable {
                         }
                     }
 
-                    let response = try await queryInternal(query, options: options)
+                    let response = try await queryInternal(
+                        query,
+                        options: options,
+                        timeout: timeout,
+                        logger: logger
+                    )
 
                     var nextPageToken: String? = response.pageToken
                     var nextRows: BigQueryQueryResponse = response
@@ -91,7 +99,9 @@ public struct BigQuery: Sendable {
                             async let fetch = try await getQueryResult(
                                 jobReference: response.jobReference,
                                 pageToken: pageToken,
-                                options: options
+                                options: options,
+                                timeout: timeout,
+                                logger: logger
                             )
                             
                             try await asyncDecode(response: currentRows)
@@ -119,7 +129,9 @@ public struct BigQuery: Sendable {
 
     private func queryInternal(
         _ query: BigQueryQueryString,
-        options: QueryOptions = QueryOptions()
+        options: QueryOptions = QueryOptions(),
+        timeout: TimeAmount,
+        logger: Logger?
     ) async throws -> BigQueryQueryResponse {
         let (query, binds) = BigQueryDataTranslation.encode(query)
 
@@ -127,9 +139,12 @@ public struct BigQuery: Sendable {
         request.maxResults = options.maxResults
         request.useLegacySql = options.useLegacySql
 
-        let response = try await authorizedClient.post(
+        let response = try await authorizedClient.execute(
+            method: .POST,
             path: "bigquery/v2/projects/\(projectID)/queries",
-            payload: request,
+            payload: .json(request),
+            timeout: timeout,
+            logger: logger,
             responseType: BigQueryQueryResponse.self
         )
 
@@ -143,15 +158,20 @@ public struct BigQuery: Sendable {
     private func getQueryResult(
         jobReference: BigQueryQueryResponse.JobReference,
         pageToken: String,
-        options: QueryOptions
+        options: QueryOptions,
+        timeout: TimeAmount,
+        logger: Logger?
     ) async throws -> BigQueryQueryResponse {
-        let response = try await authorizedClient.get(
+        let response = try await authorizedClient.execute(
+            method: .GET,
             path: "bigquery/v2/projects/\(jobReference.projectId)/queries/\(jobReference.jobId)",
             queryItems: [
                 .init(name: "pageToken", value: pageToken),
                 options.maxResults.map { .init(name: "maxResults", value: $0.description) },
                 .init(name: "location", value: jobReference.location),
             ].compactMap({ $0 }),
+            timeout: timeout,
+            logger: logger,
             responseType: BigQueryQueryResponse.self
         )
 
