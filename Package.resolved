@@ -10,21 +10,12 @@
       }
     },
     {
-      "identity" : "bigint",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/attaswift/BigInt.git",
-      "state" : {
-        "revision" : "0ed110f7555c34ff468e72e1686e59721f2b0da6",
-        "version" : "5.3.0"
-      }
-    },
-    {
       "identity" : "jwt-kit",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/vapor/jwt-kit.git",
       "state" : {
-        "revision" : "295a5e51c22d9d1d7b8fd3b7585d1581c52b32ab",
-        "version" : "5.0.0-beta.2"
+        "revision" : "39788cea76b2905595c7493ad0e84214624b32b9",
+        "version" : "5.0.1"
       }
     },
     {
@@ -77,8 +68,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-crypto.git",
       "state" : {
-        "revision" : "f0525da24dc3c6cbb2b6b338b65042bc91cbc4bb",
-        "version" : "3.3.0"
+        "revision" : "ffca28be3c9c6a86a579949d23f68818a4b9b5d8",
+        "version" : "3.8.0"
       }
     },
     {
