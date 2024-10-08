@@ -36,7 +36,7 @@ struct ServiceAccountCredential: RichCredential, Sendable {
         privateKey = try _RSA.Signing.PrivateKey(pemRepresentation: serviceAccount.privateKey)
         let key = try Insecure.RSA.PrivateKey(backing: privateKey)
         let signerTask = Task {
-            await JWTKeyCollection().addRS256(key: key)
+            await JWTKeyCollection().add(rsa: key, digestAlgorithm: .sha256)
         }
 
         self.accessToken = .init {
@@ -94,7 +94,7 @@ private struct AuthPayload: JWTPayload {
     var iat: IssuedAtClaim
     var scope: String
 
-    func verify(using algorithm: any JWTAlgorithm) throws {
+    func verify(using algorithm: some JWTAlgorithm) async throws {
         fatalError("send only payload")
     }
 }

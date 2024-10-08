@@ -53,8 +53,10 @@ struct HTTPKeySource {
             let newSigners = JWTKeyCollection()
             for (id, pem) in bodyDictionary {
                 //            print("id:", id, "pem:", pem)
-                await newSigners.addRS256(
-                    key: try Insecure.RSA.PublicKey(certificatePEM: pem), kid: JWKIdentifier(string: id)
+                await newSigners.add(
+                    rsa: try Insecure.RSA.PublicKey(certificatePEM: pem),
+                    digestAlgorithm: .sha256,
+                    kid: JWKIdentifier(string: id)
                 )
             }
 

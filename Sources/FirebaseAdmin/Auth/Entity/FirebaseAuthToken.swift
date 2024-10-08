@@ -90,7 +90,7 @@ public struct FirebaseAuthToken: JWTPayload, Sendable {
     }
 
     // INFO: https://firebase.google.com/docs/auth/admin/verify-id-tokens?hl=ja#verify_id_tokens_using_a_third-party_jwt_library
-    public func verify(using algorithm: any JWTAlgorithm) async throws {
+    public func verify(using algorithm: some JWTAlgorithm) async throws {
         guard let projectID = audience.value.first else {
             throw JWTError.claimVerificationFailure(failedClaim: audience, reason: "Empty audience")
         }
