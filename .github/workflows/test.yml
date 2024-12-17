@@ -9,7 +9,13 @@ jobs:
   test_google-cloud-swift:
     name: Test google-cloud-swift
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        swift: ["5.10", "6.0"]
     steps:
+      - uses: vapor/swiftly-action@v0.1
+        with:
+          toolchain: ${{ matrix.swift }}
       - uses: actions/checkout@v4
       - name: start emulator servers
         run: docker compose up -d
