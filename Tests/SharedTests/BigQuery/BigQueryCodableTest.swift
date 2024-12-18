@@ -1,25 +1,22 @@
 import Foundation
 import GoogleCloud
-import XCTest
+import Testing
 
-final class BigQueryCodableTest: XCTestCase {
-    func testDatetime() {
-        XCTAssertNoThrow(
-            try Date(dataType: .datetime, dataValue: "1992-08-22T00:00:00")
-        )
+@Suite struct BigQueryCodableTest {
+    @Test func datetime() throws {
+        let a = try Date(dataType: .datetime, dataValue: "1992-08-22T00:00:00")
+        #expect(a == Date(timeIntervalSince1970: 714441600))
 
-        XCTAssertNoThrow(
-            try Date(dataType: .datetime, dataValue: "1992-08-22T00:00:00.000000")
-        )
+        let b = try Date(dataType: .datetime, dataValue: "1992-08-22T00:00:00.000000")
+        #expect(b == Date(timeIntervalSince1970: 714441600))
     }
 
-    func testTimestamp() {
-        XCTAssertNoThrow(
-            try Date(dataType: .timestamp, dataValue: "1641038400")
-        )
-        XCTAssertNoThrow(
-            try Date(dataType: .timestamp, dataValue: "1641038400.000000")
-        )
+    @Test func timestamp() throws {
+        let a = try Date(dataType: .timestamp, dataValue: "1641038400")
+        #expect(a.timeIntervalSince1970 == 1641038400)
+
+        let b = try Date(dataType: .timestamp, dataValue: "1641038400.000000")
+        #expect(b.timeIntervalSince1970 == 1641038400)
     }
 }
 
