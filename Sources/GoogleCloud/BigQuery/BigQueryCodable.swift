@@ -1,7 +1,7 @@
 import Foundation
 import NIOPosix
 
-public protocol BigQueryEncodable {
+public protocol BigQueryEncodable: Sendable {
     static var parameterDataType: BigQueryDataType { get }
     func parameterDataValue() -> String
 }
@@ -81,9 +81,6 @@ extension Date: BigQueryCodable {
         self.timeIntervalSince1970.parameterDataValue()
     }
 
-    private static let formatter = ThreadSpecificVariable<ISO8601DateFormatter>()
-    private static let formatterMilli = ThreadSpecificVariable<ISO8601DateFormatter>()
-
     public init(dataType: BigQueryDataType, dataValue: String) throws {
         switch dataType {
         case .timestamp:
@@ -92,35 +89,16 @@ extension Date: BigQueryCodable {
             }
             self = .init(timeIntervalSince1970: t)
         case .datetime:
-            let f: ISO8601DateFormatter
-            if let tl = Self.formatter.currentValue {
-                f = tl
-            } else {
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions.remove(.withTimeZone)
-                Self.formatter.currentValue = formatter
-                f = formatter
-            }
-
-            if let d = f.date(from: dataValue) {
+            var format = Date.ISO8601FormatStyle.iso8601
+                .year()
+                .month()
+                .day()
+                .time(includingFractionalSeconds: false)
+            if let d = try? Date(dataValue, strategy: format) {
                 self = d
             } else {
-                let f: ISO8601DateFormatter
-                if let tl = Self.formatterMilli.currentValue {
-                    f = tl
-                } else {
-                    let formatter = ISO8601DateFormatter()
-                    formatter.formatOptions.remove(.withTimeZone)
-                    formatter.formatOptions.insert(.withFractionalSeconds)
-                    Self.formatterMilli.currentValue = formatter
-                    f = formatter
-                }
-
-                if let d = f.date(from: dataValue) {
-                    self = d
-                } else {
-                    throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "\"\(dataValue)\" is invalid format"))
-                }
+                format = format.time(includingFractionalSeconds: true)
+                self = try Date(dataValue, strategy: format)
             }
         default:
             throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "\"\(dataType)\" is unsupported"))

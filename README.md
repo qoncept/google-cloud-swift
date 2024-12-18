@@ -5,7 +5,7 @@ SwiftサーバからGCPの各種サービスやFirebaseを利用するための�
 # インストール
 
 ```swift
-.package(url: "https://github.com/qoncept/google-cloud-swift.git", from: "1.0.0"),
+.package(url: "https://github.com/qoncept/google-cloud-swift.git", from: "2.0.0"),
 ```
 
 # テスト

@@ -19,7 +19,13 @@ final class MockClock: Clock, @unchecked Sendable {
     }
 }
 
-extension Date: InstantProtocol {
+#if hasFeature(RetroactiveAttribute)
+extension Date: @retroactive InstantProtocol {}
+#else
+extension Date: InstantProtocol {}
+#endif
+
+extension Date {
     public typealias Duration = Swift.Duration
     public func advanced(by duration: Duration) -> Self {
         addingTimeInterval(TimeInterval(duration.components.seconds))

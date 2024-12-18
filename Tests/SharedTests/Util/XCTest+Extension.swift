@@ -1,7 +1,7 @@
 import Foundation
 import XCTest
 
-func XCTUnwrap<T>(_ expression: @Sendable () async throws -> T?, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) async throws -> T {
+func XCTUnwrap<T>(_ expression: () async throws -> T?, _ message: @autoclosure () -> String = "", file: StaticString = #filePath, line: UInt = #line) async throws -> T {
     let v = await Result { try await expression() }
     return try XCTUnwrap(v.get(), message(), file: file, line: line)
 }
