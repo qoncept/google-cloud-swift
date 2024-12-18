@@ -38,7 +38,7 @@ public struct BigQuery: Sendable {
         self.threadPool = threadPool
     }
 
-    public struct QueryOptions {
+    public struct QueryOptions: Sendable {
         public init(maxResults: Int? = nil, useLegacySql: Bool = false) {
             self.maxResults = maxResults
             self.useLegacySql = useLegacySql

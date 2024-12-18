@@ -10,7 +10,7 @@ final class AuthTest: XCTestCase {
         MockCredential()
     })
 
-    private static var emulatorURL: URL? = Auth.emulatorBaseURL()
+    private static nonisolated(unsafe) var emulatorURL: URL? = Auth.emulatorBaseURL()
 
     override class func setUp() {
         super.setUp()

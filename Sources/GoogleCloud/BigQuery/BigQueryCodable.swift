@@ -1,7 +1,7 @@
 import Foundation
 import NIOPosix
 
-public protocol BigQueryEncodable {
+public protocol BigQueryEncodable: Sendable {
     static var parameterDataType: BigQueryDataType { get }
     func parameterDataValue() -> String
 }
@@ -81,9 +81,6 @@ extension Date: BigQueryCodable {
         self.timeIntervalSince1970.parameterDataValue()
     }
 
-    private static let formatter = ThreadSpecificVariable<ISO8601DateFormatter>()
-    private static let formatterMilli = ThreadSpecificVariable<ISO8601DateFormatter>()
-
     public init(dataType: BigQueryDataType, dataValue: String) throws {
         switch dataType {
         case .timestamp:
@@ -92,31 +89,10 @@ extension Date: BigQueryCodable {
             }
             self = .init(timeIntervalSince1970: t)
         case .datetime:
-            let f: ISO8601DateFormatter
-            if let tl = Self.formatter.currentValue {
-                f = tl
-            } else {
-                let formatter = ISO8601DateFormatter()
-                formatter.formatOptions.remove(.withTimeZone)
-                Self.formatter.currentValue = formatter
-                f = formatter
-            }
-
-            if let d = f.date(from: dataValue) {
+            if let d = try? Date(dataValue, strategy: .iso8601) {
                 self = d
             } else {
-                let f: ISO8601DateFormatter
-                if let tl = Self.formatterMilli.currentValue {
-                    f = tl
-                } else {
-                    let formatter = ISO8601DateFormatter()
-                    formatter.formatOptions.remove(.withTimeZone)
-                    formatter.formatOptions.insert(.withFractionalSeconds)
-                    Self.formatterMilli.currentValue = formatter
-                    f = formatter
-                }
-
-                if let d = f.date(from: dataValue) {
+                if let d = try? Date(dataValue, strategy: Date.ISO8601FormatStyle(includingFractionalSeconds: true)) {
                     self = d
                 } else {
                     throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "\"\(dataValue)\" is invalid format"))

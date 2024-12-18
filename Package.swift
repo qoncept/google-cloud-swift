@@ -1,19 +1,9 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.0
 import PackageDescription
-
-func swiftSettings() -> [SwiftSetting] {
-    let settings: [SwiftSetting] = [
-        .enableUpcomingFeature("ForwardTrailingClosures"),
-        .enableUpcomingFeature("ConciseMagicFile"),
-        .enableUpcomingFeature("BareSlashRegexLiterals"),
-        .enableUpcomingFeature("ExistentialAny")
-    ]
-    return settings
-}
 
 let package = Package(
     name: "google-cloud-swift",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v14)],
     products: [
         .library(name: "FirebaseAdmin", targets: ["FirebaseAdmin"]),
         .library(name: "GoogleCloud", targets: ["GoogleCloud"]),
@@ -30,16 +20,14 @@ let package = Package(
                 .product(name: "_CryptoExtras", package: "swift-crypto"),
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
                 .product(name: "JWTKit", package: "jwt-kit"),
-            ],
-            swiftSettings: swiftSettings()
+            ]
         ),
         .target(
             name: "GoogleCloud",
             dependencies: [
                 "GoogleCloudBase",
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
-            ],
-            swiftSettings: swiftSettings()
+            ]
         ),
         .target(
             name: "FirebaseAdmin",
@@ -47,16 +35,14 @@ let package = Package(
                 "GoogleCloudBase",
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
                 .product(name: "JWTKit", package: "jwt-kit"),
-            ],
-            swiftSettings: swiftSettings()
+            ]
         ),
         .testTarget(
             name: "SharedTests",
             dependencies: [
                 "GoogleCloud",
                 "FirebaseAdmin",
-            ],
-            swiftSettings: swiftSettings()
+            ]
         ),
     ]
 )

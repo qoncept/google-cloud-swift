@@ -7,21 +7,17 @@ import NIOHTTP1
 
 private let pathStyledHost = URL(string: "https://storage.googleapis.com")!
 private let sevenDays: TimeInterval = 604800
-private let stampFormatter: ISO8601DateFormatter = {
-    let f = ISO8601DateFormatter()
-    f.formatOptions = [
-        .withYear, .withMonth, .withDay,
-    ]
-    return f
-}()
-private let isoFormatter: ISO8601DateFormatter = {
-    let f = ISO8601DateFormatter()
-    f.formatOptions = [
-        .withYear, .withMonth, .withDay,
-        .withTime, .withTimeZone,
-    ]
-    return f
-}()
+private let stampFormat: Date.ISO8601FormatStyle = .iso8601Date(
+    timeZone: .init(secondsFromGMT: 0)!,
+    dateSeparator: .omitted
+)
+private let isoFormat: Date.ISO8601FormatStyle = .iso8601WithTimeZone(
+    includingFractionalSeconds: false,
+    dateSeparator: .omitted,
+    dateTimeSeparator: .standard,
+    timeSeparator: .omitted,
+    timeZoneSeparator: .colon
+)
 
 struct URLSignerError: Error, LocalizedError {
     var message: String
@@ -106,14 +102,14 @@ struct URLSigner {
             .sorted()
             .joined(separator: ";")
 
-        let datestamp = stampFormatter.string(from: accessibleAt)
+        let datestamp = accessibleAt.ISO8601Format(stampFormat)
         let credentialScope = "\(datestamp)/auto/storage/goog4_request"
 
         let credential = authorizedClient.credential
         guard let credential = credential as? (any RichCredential) else {
             throw URLSignerError(message: "\(type(of: credential)) does not support signing.")
         }
-        let dateISO = isoFormatter.string(from: accessibleAt)
+        let dateISO = accessibleAt.ISO8601Format(isoFormat)
 
         let queryParams: [URLQueryItem] = [
             URLQueryItem(name: "X-Goog-Algorithm", value: "GOOG4-RSA-SHA256"),

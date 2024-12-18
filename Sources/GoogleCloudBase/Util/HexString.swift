@@ -1,7 +1,7 @@
 import Foundation
 import Crypto
 
-public struct HexEncodingOptions: OptionSet {
+public struct HexEncodingOptions: OptionSet, Sendable {
     public init(rawValue: Int) {
         self.rawValue = rawValue
     }

@@ -1,5 +1,5 @@
-public struct BigQueryQueryString {
-    @usableFromInline enum Fragment {
+public struct BigQueryQueryString: Sendable {
+    @usableFromInline enum Fragment: Sendable {
         case raw(String)
         case parameter(any BigQueryEncodable)
     }

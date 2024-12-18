@@ -13,7 +13,7 @@ public struct AsyncCredentialFactory: AsyncCredentialFactoryProtocol {
     init(cb: @Sendable @escaping (Context) async throws -> any Credential) {
         self.cb = cb
     }
-    init(next: @escaping (Context) async throws -> AsyncCredentialFactory) {
+    init(next: @escaping @Sendable (Context) async throws -> AsyncCredentialFactory) {
         self.cb = { context in
             let factory = try await next(context)
             return try await factory.makeCredential(context: context)
@@ -32,7 +32,7 @@ public struct SyncCredentialFactory: AsyncCredentialFactoryProtocol {
     init(cb: @Sendable @escaping (Context) throws -> any Credential) {
         self.cb = cb
     }
-    init(next: @escaping (Context) throws -> SyncCredentialFactory) {
+    init(next: @escaping @Sendable (Context) throws -> SyncCredentialFactory) {
         self.cb = { context in
             let factory = try next(context)
             return try factory.makeCredential(context: context)
@@ -109,7 +109,7 @@ extension SyncCredentialFactory {
 
     ///  `~/.config/gcloud/application_default_credentials.json`
     public static var configFile: SyncCredentialFactory {
-        func defaultGcloudCredentialURL() -> URL {
+        @Sendable func defaultGcloudCredentialURL() -> URL {
 #if os(Windows)
             // Windows has a dedicated low-rights location for apps at ~/Application Data
             fatalError("not supported")

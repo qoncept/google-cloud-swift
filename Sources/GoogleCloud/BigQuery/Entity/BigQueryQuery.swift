@@ -2,12 +2,12 @@ import Foundation
 
 // https://cloud.google.com/bigquery/docs/reference/rest/v2/jobs/query#QueryRequest
 
-struct BigQueryQueryRequest: Encodable {
+struct BigQueryQueryRequest: Encodable, Sendable {
     var kind: String? // ?
     var query: String
     var maxResults: Int?
 
-    struct DatasetReference: Encodable {
+    struct DatasetReference: Encodable, Sendable {
         var datasetId: String
         var projectId: String?
     }
@@ -18,14 +18,14 @@ struct BigQueryQueryRequest: Encodable {
     var useLegacySql: Bool?
 
     // https://cloud.google.com/bigquery/docs/parameterized-queries?#api
-    struct QueryParameter: Encodable {
+    struct QueryParameter: Encodable, Sendable {
         var name: String
-        struct `Type`: Encodable {
+        struct `Type`: Encodable, Sendable {
             var type: String
             // arrayType and structTypes is not yet supported
         }
         var parameterType: Type
-        struct Value: Encodable {
+        struct Value: Encodable, Sendable {
             var value: String
             // arrayType and structTypes is not yet supported
         }
@@ -34,9 +34,9 @@ struct BigQueryQueryRequest: Encodable {
     var queryParameters: [QueryParameter]
 }
 
-struct BigQueryQueryResponse: Decodable {
-    struct TableSchema: Decodable {
-        struct TableFieldSchema: Decodable {
+struct BigQueryQueryResponse: Decodable, Sendable {
+    struct TableSchema: Decodable, Sendable {
+        struct TableFieldSchema: Decodable, Sendable {
             var name: String
             var type: BigQueryDataType
             var mode: String?
@@ -46,19 +46,19 @@ struct BigQueryQueryResponse: Decodable {
     }
     var schema: TableSchema?
 
-    struct JobReference: Decodable {
+    struct JobReference: Decodable, Sendable {
         var projectId: String
         var jobId: String
         var location: String?
     }
     var jobReference: JobReference
 
-    struct Row: Decodable {
-        struct NestedColumnValue: Decodable {
+    struct Row: Decodable, Sendable {
+        struct NestedColumnValue: Decodable, Sendable {
             var v: Row
         }
 
-        enum Value: Decodable {
+        enum Value: Decodable, Sendable {
             case repeating([NestedColumnValue])
             case nonRepeating(String?)
 
