@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        swift: ["5.10", "6.0"]
+        swift: ["6.0"]
     steps:
       - uses: vapor/swiftly-action@v0.1
         with:

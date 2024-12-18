@@ -89,14 +89,16 @@ extension Date: BigQueryCodable {
             }
             self = .init(timeIntervalSince1970: t)
         case .datetime:
-            if let d = try? Date(dataValue, strategy: .iso8601) {
+            var format = Date.ISO8601FormatStyle.iso8601
+                .year()
+                .month()
+                .day()
+                .time(includingFractionalSeconds: false)
+            if let d = try? Date(dataValue, strategy: format) {
                 self = d
             } else {
-                if let d = try? Date(dataValue, strategy: Date.ISO8601FormatStyle(includingFractionalSeconds: true)) {
-                    self = d
-                } else {
-                    throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "\"\(dataValue)\" is invalid format"))
-                }
+                format = format.time(includingFractionalSeconds: true)
+                self = try Date(dataValue, strategy: format)
             }
         default:
             throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "\"\(dataType)\" is unsupported"))
