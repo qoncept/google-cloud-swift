@@ -11,9 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        swift: ["6.0"]
+        swift: ["6.0", "6.2"]
     steps:
-      - uses: vapor/swiftly-action@v0.1
+      - uses: vapor/swiftly-action@v0.2
         with:
           toolchain: ${{ matrix.swift }}
       - uses: actions/checkout@v4
