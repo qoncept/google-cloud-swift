@@ -236,6 +236,55 @@ public struct Auth: Sendable {
     }
 
     public func customToken(uid: String) async throws -> String {
-        fatalError("TODO")
+        try UserValidations.validateUID(uid).get()
+
+        let credential = baseClient.authorizedClient.credential
+        guard let credential = credential as? any RichCredential else {
+            throw FirebaseAuthError(code: .invalidServiceAccount, message: "\(type(of: credential)) does not support signing custom tokens.")
+        }
+
+        struct FirebaseCustomTokenPayload: Encodable {
+            var iss: String
+            var sub: String
+            var aud: String
+            var iat: Int
+            var exp: Int
+            var uid: String
+            var tenant_id: String?
+        }
+
+        let nowSeconds = Int(Date.now.timeIntervalSince1970)
+        let payload = FirebaseCustomTokenPayload(
+            iss: credential.clientEmail,
+            sub: credential.clientEmail,
+            aud: "https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit",
+            iat: nowSeconds,
+            exp: nowSeconds + 3600,
+            uid: uid,
+            tenant_id: baseClient.tenantID
+        )
+
+        /// `{"alg": "RS256","typ": "JWT"}`
+        let headerEncoded = "eyJhbGciOiAiUlMyNTYiLCJ0eXAiOiAiSldUIn0"
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let payloadEncoded = try encoder.encode(payload).base64URLEncodedString()
+
+        let tokenBody = "\(headerEncoded).\(payloadEncoded)"
+        let signature = try await credential.sign(data: Data(tokenBody.utf8))
+        let signatureEncoded = signature.base64URLEncodedString()
+
+        return "\(tokenBody).\(signatureEncoded)"
+    }
+}
+
+extension Data {
+    fileprivate func base64URLEncodedString() -> String {
+        var string = base64EncodedString()
+        string.replace("+", with: "-")
+        string.replace("/", with: "_")
+        string.replace("=", with: "")
+        return string
     }
 }
