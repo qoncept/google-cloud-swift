@@ -1,23 +1,24 @@
 import Atomics
+import Foundation
 @testable import GoogleCloudBase
 import NIOPosix
-import XCTest
+import Testing
 
-final class AutoRotatingValueTest: XCTestCase {
+@Suite struct AutoRotatingValueTest {
     private let mockClock = MockClock()
 
-    func testGetValue() async throws {
+    @Test func getValue() async throws {
         let counter = ManagedAtomic(0)
         let store = AutoRotatingValue {
             counter.wrappingIncrement(ordering: .relaxed)
             return ("hello", .seconds(1))
         }
         let token = try await store.getValue()
-        XCTAssertEqual(token, "hello")
-        XCTAssertEqual(counter.load(ordering: .relaxed), 1)
+        #expect(token == "hello")
+        #expect(counter.load(ordering: .relaxed) == 1)
     }
 
-    func testRefreshValue() async throws {
+    @Test func refreshValue() async throws {
         let counter = ManagedAtomic(0)
         let store = AutoRotatingValue(clock: mockClock) {
             counter.wrappingIncrement(ordering: .relaxed)
@@ -26,17 +27,17 @@ final class AutoRotatingValueTest: XCTestCase {
         mockClock.nowValue = Date()
 
         _ = try await store.getValue()
-        XCTAssertEqual(counter.load(ordering: .relaxed), 1)
+        #expect(counter.load(ordering: .relaxed) == 1)
 
         _ = try await store.getValue()
-        XCTAssertEqual(counter.load(ordering: .relaxed), 1)
+        #expect(counter.load(ordering: .relaxed) == 1)
 
         mockClock.nowValue?.addTimeInterval(2)
         _ = try await store.getValue()
-        XCTAssertEqual(counter.load(ordering: .relaxed), 2)
+        #expect(counter.load(ordering: .relaxed) == 2)
     }
 
-    func testParallelAccess() async throws {
+    @Test func parallelAccess() async throws {
         let counter = ManagedAtomic(0)
         let store = AutoRotatingValue(clock: mockClock) {
             counter.wrappingIncrement(ordering: .relaxed)
@@ -54,6 +55,6 @@ final class AutoRotatingValueTest: XCTestCase {
             try await g.waitForAll()
         }
 
-        XCTAssertEqual(counter.load(ordering: .relaxed), 1)
+        #expect(counter.load(ordering: .relaxed) == 1)
     }
 }

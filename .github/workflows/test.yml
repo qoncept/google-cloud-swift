@@ -2,7 +2,8 @@ name: Test
 
 on:
   push:
-    branches: main
+    branches:
+      - main
   pull_request:
 
 jobs:
@@ -26,5 +27,7 @@ jobs:
             .build/repositories
           key: google-cloud-swift_build_${{ runner.os }}_${{ hashFiles('Package.resolved') }}
       - run: swift build
-      - name: swift test
+      - if: matrix.swift == '6.2' # swift 6.0 does not support test scoping yet
+        name: Run test
         run: ./run_test.sh
+

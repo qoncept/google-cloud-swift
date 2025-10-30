@@ -51,7 +51,7 @@ public struct Auth: Sendable {
         projectID paramProjectID: String? = nil
     ) throws {
         var credential = client.credential
-        var baseURL: URL
+        let baseURL: URL
         guard let projectID = paramProjectID ?? Self.projectID(from: credential) else {
             throw AuthError(message: "projectID must be provided if the credential doesn't have it.")
         }
@@ -137,7 +137,7 @@ public struct Auth: Sendable {
 
     private func user(
         request: GetUserRequest,
-        logger: Logger?
+        logger: Logger? = nil
     ) async throws -> UserRecord? {
         let path = "/accounts:lookup"
         let res = try await baseClient.post(
@@ -233,5 +233,9 @@ public struct Auth: Sendable {
             logger: logger,
             responseType: ListUserResult.self
         )
+    }
+
+    public func customToken(uid: String) async throws -> String {
+        fatalError("TODO")
     }
 }

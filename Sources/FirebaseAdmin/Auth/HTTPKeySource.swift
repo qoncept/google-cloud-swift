@@ -36,7 +36,10 @@ struct HTTPKeySource {
         }
     }
 
-    init(client: HTTPClient, clock: some Clock<Duration> = .continuous) {
+    init(
+        client: HTTPClient = .shared,
+        clock: some Clock<Duration> = .continuous
+    ) {
         self.client = client
         let willRefreshKeys = NIOLockedValueBox<(@Sendable () -> ())?>(nil)
         self.willRefreshKeys = willRefreshKeys

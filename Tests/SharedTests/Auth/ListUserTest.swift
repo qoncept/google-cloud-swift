@@ -1,55 +1,24 @@
+import AsyncHTTPClient
 @testable import FirebaseAdmin
 import NIOPosix
-import XCTest
+import Testing
 import Logging
 
 private let testingProjectID = "testing-project-id"
 
-final class ListUserTest: XCTestCase {
-    private static let client = try! GCPClient(credentialFactory: .custom { _ in
-        MockCredential()
-    })
+extension AuthTest {
+    struct ListUserTest {}
+}
 
-    private static nonisolated(unsafe) var emulatorURL: URL? = Auth.emulatorBaseURL()
-
-    override class func setUp() {
-        super.setUp()
-        initLogger()
-
-        if let url = Self.emulatorURL {
-            let endpoint = Auth.emulatorAPIBaseURL(url: url)!.appendingPathComponent("projects/\(testingProjectID)/accounts")
-            do {
-                let request = try HTTPClient.Request(url: endpoint, method: .DELETE)
-                _ = try client.httpClient.execute(request: request).wait()
-            } catch {
-                XCTFail("\(error)")
-            }
-        }
-    }
-
-    override class func tearDown() {
-        do {
-            try client.syncShutdown()
-        } catch {
-            XCTFail("\(error)")
-        }
-
-        super.tearDown()
-    }
-
-    override func setUpWithError() throws {
-        try super.setUpWithError()
-        try XCTSkipIf(Self.emulatorURL == nil, "ListUserTest uses Firebase Auth Emulator.")
-    }
-
+extension AuthTest.ListUserTest {
     private func makeAuth() throws -> Auth {
         try Auth(
-            client: Self.client,
+            client: .mockCredentialClient,
             projectID: testingProjectID
         )
     }
 
-    func testListUser() async throws {
+    @Test func listUser() async throws {
         let auth = try makeAuth()
 
         for index in 0..<90 {
@@ -69,13 +38,14 @@ final class ListUserTest: XCTestCase {
             callCount += 1
             let result = try await auth.listUsers(pageSize: 20, pageToken: pageToken).get()
             if callCount == 5 {
-                XCTAssertEqual(result.users.count, 10)
+                #expect(result.users.count == 10)
             } else {
-                XCTAssertEqual(result.users.count, 20)
+                #expect(result.users.count == 20)
             }
             for user in result.users {
-                let index = Int(user.displayName!)!
-                XCTAssertEqual(user.email, "\(index)@firebase.com")
+                let displayName = try #require(user.displayName)
+                let index = try #require(Int(displayName))
+                #expect(user.email == "\(displayName)@firebase.com")
                 founds[index] = user
             }
             guard let nextPageToken = result.nextPageToken else {
@@ -84,9 +54,9 @@ final class ListUserTest: XCTestCase {
             pageToken = nextPageToken
         }
 
-        XCTAssertEqual(callCount, 5)
+        #expect(callCount == 5)
 
         let foundIDs = Set(founds.keys)
-        XCTAssertEqual(foundIDs, Set(0..<90))
+        #expect(foundIDs == Set(0..<90))
     }
 }

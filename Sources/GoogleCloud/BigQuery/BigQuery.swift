@@ -47,7 +47,7 @@ public struct BigQuery: Sendable {
         public var useLegacySql: Bool = false
     }
 
-    public func query<Row: Decodable>(
+    public func query<Row: Decodable & GCSSendableMetatype>(
         _ query: BigQueryQueryString,
         options: QueryOptions = QueryOptions(),
         decoding rowType: Row.Type,
@@ -58,7 +58,7 @@ public struct BigQuery: Sendable {
             .reduce(into: [], { $0.append(contentsOf: $1) })
     }
 
-    public func queryStream<Row: Decodable>(
+    public func queryStream<Row: Decodable & GCSSendableMetatype>(
         _ query: BigQueryQueryString,
         options: QueryOptions = QueryOptions(),
         decoding rowType: Row.Type,

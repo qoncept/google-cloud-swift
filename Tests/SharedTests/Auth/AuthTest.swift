@@ -1,55 +1,33 @@
+import AsyncHTTPClient
 @testable import FirebaseAdmin
 import NIOPosix
-import XCTest
+import Testing
 import Logging
 
 private let testingProjectID = "testing-project-id"
 
-final class AuthTest: XCTestCase {
-    private static let client = try! GCPClient(credentialFactory: .custom { _ in
-        MockCredential()
-    })
-
-    private static nonisolated(unsafe) var emulatorURL: URL? = Auth.emulatorBaseURL()
-
-    override class func setUp() {
-        super.setUp()
-        initLogger()
-
-        if let url = Self.emulatorURL {
+@Suite(
+    .gcpClient,
+    .serialized,
+    .enabled(if: Auth.emulatorBaseURL() != nil, "AuthTest uses Firebase Auth Emulator.")
+) struct AuthTest {
+    init() async throws {
+        if let url = Auth.emulatorBaseURL() {
             let endpoint = Auth.emulatorAPIBaseURL(url: url)!.appendingPathComponent("projects/\(testingProjectID)/accounts")
-            do {
-                let request = try HTTPClient.Request(url: endpoint, method: .DELETE)
-                _ = try client.httpClient.execute(request: request).wait()
-            } catch {
-                XCTFail("\(error)")
-            }
+            var request = HTTPClientRequest(url: endpoint.absoluteString)
+            request.method = .DELETE
+            _ = try await HTTPClient.shared.execute(request, timeout: .seconds(1))
         }
-    }
-
-    override class func tearDown() {
-        do {
-            try client.syncShutdown()
-        } catch {
-            XCTFail("\(error)")
-        }
-
-        super.tearDown()
-    }
-
-    override func setUpWithError() throws {
-        try super.setUpWithError()
-        try XCTSkipIf(Self.emulatorURL == nil, "AuthTest uses Firebase Auth Emulator.")
     }
 
     private func makeAuth() throws -> Auth {
         try Auth(
-            client: Self.client,
+            client: .mockCredentialClient,
             projectID: testingProjectID
         )
     }
 
-    func testCreateUser() async throws {
+    @Test func createUser() async throws {
         let auth = try makeAuth()
 
         do {
@@ -57,27 +35,25 @@ final class AuthTest: XCTestCase {
                 email: "testCreateUser@example.com",
                 password: "012345"
             )).get()
-            XCTAssertTrue(!uid.isEmpty)
+            #expect(!uid.isEmpty)
         } catch {
             dump(error)
-            XCTFail("\(error)")
+            Issue.record("\(error)")
         }
     }
 
-    func testCreateUserWithID() async throws {
+    @Test func createUserWithID() async throws {
         let auth = try makeAuth()
 
-        await XCTAssertNoThrow({
-            let uid = try await auth.createUser(UserToCreate(
-                localId: "tama",
-                email: "testCreateUserWithID@example.com",
-                password: "012345"
-            )).get()
-            XCTAssertEqual(uid, "tama")
-        })
+        let uid = try await auth.createUser(UserToCreate(
+            localId: "tama",
+            email: "testCreateUserWithID@example.com",
+            password: "012345"
+        )).get()
+        #expect(uid == "tama")
     }
 
-    func testCreateUserErrorEmailExists() async throws {
+    @Test func createUserErrorEmailExists() async throws {
         let auth = try makeAuth()
 
         let email = "testCreateUserErrorEmailExists@example.com"
@@ -91,39 +67,32 @@ final class AuthTest: XCTestCase {
             email: email,
             password: "123456"
         ))
-        let error = try XCTUnwrap(ret.failure)
-        XCTAssertEqual(error.code, .emailExists)
+        let error = try #require(ret.failure)
+        #expect(error.code == .emailExists)
     }
 
-    func testGetUser() async throws {
+    @Test func getUser() async throws {
         let auth = try makeAuth()
 
-        let uid = try await XCTAssertNoThrow {
-            try await auth.createUser(UserToCreate(
-                email: "testGetUser@example.com",
-                password: "111111"
-            )).get()
-        }
+        let uid = try await auth.createUser(UserToCreate(
+            email: "testGetUser@example.com",
+            password: "111111"
+        )).get()
 
-        let result = try await XCTUnwrap {
-            try await auth.user(for: uid)
-        }
-        XCTAssertEqual(result.uid, uid)
-        XCTAssertEqual(result.email, "testGetUser@example.com".lowercased())
-        XCTAssertEqual(result.providers.first?.providerID, "password")
-        XCTAssertTrue(try XCTUnwrap(result.passwordHash).hasSuffix("password=111111"))
+        let result = try #require(try await auth.user(for: uid))
+        #expect(result.uid == uid)
+        #expect(result.email == "testGetUser@example.com".lowercased())
+        #expect(result.providers.first?.providerID == "password")
+        #expect(try #require(result.passwordHash).hasSuffix("password=111111"))
     }
 
-    func testGetUserNotFound() async throws {
+    @Test func getUserNotFound() async throws {
         let auth = try makeAuth()
 
-        let result = try await XCTAssertNoThrow {
-            try await auth.user(for: "aaaaaaaaaaaaaaaaaaaaa")
-        }
-        XCTAssertNil(result)
+        #expect(try await auth.user(for: "aaaaaaaaaaaaaaaaaaaaa") == nil)
     }
 
-    func testGetUserEmail() async throws {
+    @Test func getUserEmail() async throws {
         let auth = try makeAuth()
 
         _ = try await auth.createUser(UserToCreate(
@@ -132,17 +101,17 @@ final class AuthTest: XCTestCase {
         ))
 
         let user = try await auth.user(byEmail: "testGetUserEmail@example.com".lowercased())
-        XCTAssertNotNil(user)
+        #expect(user != nil)
     }
 
-    func testGetUserEmailNotFound() async throws {
+    @Test func getUserEmailNotFound() async throws {
         let auth = try makeAuth()
 
         let user = try await auth.user(byEmail: "xxxxxx@example.com")
-        XCTAssertNil(user)
+        #expect(user == nil)
     }
 
-    func testGetUsers() async throws {
+    @Test func getUsers() async throws {
         let auth = try makeAuth()
 
         let ids = [
@@ -179,34 +148,33 @@ final class AuthTest: XCTestCase {
             .email("testGetUsers.3@example.com".lowercased())
         ])
         
-        XCTAssertEqual(
-            Set(users.map { $0.uid }),
-            [ids[0], ids[1], ids[3]]
+        #expect(
+            Set(users.map { $0.uid }) == [ids[0], ids[1], ids[3]]
         )
     }
 
-    func testGetUsersEmpty() async throws {
+    @Test func getUsersEmpty() async throws {
         let auth = try makeAuth()
 
         let users = try await auth.users(for: [])
 
-        XCTAssertEqual(users.count, 0)
+        #expect(users.count == 0)
     }
 
-    func testUpdateUserConsistentID() async throws {
+    @Test func updateUserConsistentID() async throws {
         let auth = try makeAuth()
         let uid = try await auth.createUser(
             UserToCreate(email: "testUpdateUserID@example.com", password: "123456")
         ).get()
         let user0o = try await auth.user(for: uid)
-        let user0 = try XCTUnwrap(user0o)
-        XCTAssertFalse(user0.disabled)
+        let user0 = try #require(user0o)
+        #expect(!user0.disabled)
 
         try await auth.updateUser(.init(disabled: true), for: uid).get()
         let user1o = try await auth.user(for: uid)
-        let user1 = try XCTUnwrap(user1o)
-        XCTAssertEqual(user1.uid, uid)
-        XCTAssertTrue(user1.disabled)
+        let user1 = try #require(user1o)
+        #expect(user1.uid == uid)
+        #expect(user1.disabled)
     }
 
     private func runUpdateUser(
@@ -228,49 +196,48 @@ final class AuthTest: XCTestCase {
         case .success: break
         }
         let usero = try await auth.user(for: uid0)
-        return .success(try XCTUnwrap(usero))
+        return .success(try #require(usero))
     }
 
-    func testUpdateUserDisplayName() async throws {
+    @Test func updateUserDisplayName() async throws {
         let u = try await runUpdateUser(
             properties: .init(displayName: .set("dog"))
         ).get()
-        XCTAssertEqual(u.displayName, "dog")
+        #expect(u.displayName == "dog")
     }
 
-    func testUpdateUserDeleteDisplayName() async throws {
+    @Test func updateUserDeleteDisplayName() async throws {
         let u = try await runUpdateUser(
             properties: .init(displayName: .delete)
         ).get()
-        XCTAssertEqual(u.displayName, nil)
+        #expect(u.displayName == nil)
     }
 
-    func testUpdateUserErrorEmptyDisplayName() async throws {
-        let error = try await XCTUnwrap {
-            try await runUpdateUser(
-                properties: .init(displayName: .set(""))
-            ).failure
-        }
-        XCTAssertEqual(error.code, .invalidDisplayName)
-        XCTAssertEqual(error.message, "display name must be a non-empty string")
+    @Test func updateUserErrorEmptyDisplayName() async throws {
+        let result = try await runUpdateUser(
+            properties: .init(displayName: .set(""))
+        )
+        let error = try #require(result.failure)
+        #expect(error.code == .invalidDisplayName)
+        #expect(error.message == "display name must be a non-empty string")
     }
 
-    func testUpdateUserEmail() async throws {
+    @Test func updateUserEmail() async throws {
         let u = try await runUpdateUser(
             properties: .init(email: "testUpdateUserEmail.updated@example.com")
         ).get()
-        XCTAssertEqual(u.email, "testUpdateUserEmail.updated@example.com".lowercased())
+        #expect(u.email == "testUpdateUserEmail.updated@example.com".lowercased())
     }
 
-    func testUpdateUserDeletePhoneNumber() async throws {
+    @Test func updateUserDeletePhoneNumber() async throws {
         let u = try await runUpdateUser(
             create: { $0.phoneNumber = "+81-090-1234-1234" },
             properties: .init(phoneNumber: .delete)
         ).get()
-        XCTAssertEqual(u.phoneNumber, nil)
+        #expect(u.phoneNumber == nil)
     }
 
-    func testUpdateUserPassword() async throws {
+    @Test func updateUserPassword() async throws {
         let u = try await runUpdateUser(
             properties: .init(password: "987654")
         ).get()
@@ -278,29 +245,28 @@ final class AuthTest: XCTestCase {
         _ = u
     }
 
-    func testUpdateUserPhotoURL() async throws {
+    @Test func updateUserPhotoURL() async throws {
         let u = try await runUpdateUser(
             properties: .init(photoURL: .set("https://example.com/cat.jpeg"))
         ).get()
-        XCTAssertEqual(u.photoURL, "https://example.com/cat.jpeg")
+        #expect(u.photoURL == "https://example.com/cat.jpeg")
     }
 
-    func testUpdateUserErrorInvalidEmail() async throws {
+    @Test func updateUserErrorInvalidEmail() async throws {
         let auth = try makeAuth()
         let id = try await auth.createUser(.init(
             email: "testUpdateUserErrorInvalidEmail@example.com",
             password: "123456"
         )).get()
-        let error = try await XCTUnwrap {
-            try await auth.updateUser(
-                .init(email: "a"), for: id
-            ).failure
-        }
-        XCTAssertEqual(error.code, .invalidEmail)
-        XCTAssertEqual(error.message, "malformed email string: a")
+        let result = try await auth.updateUser(
+            .init(email: "a"), for: id
+        )
+        let error = try #require(result.failure)
+        #expect(error.code == .invalidEmail)
+        #expect(error.message == "malformed email string: a")
     }
 
-    func testUpdateUserErrorEmailExists() async throws {
+    @Test func updateUserErrorEmailExists() async throws {
         let auth = try makeAuth()
 
         let email0 = "testUpdateUserErrorEmailExists.0@example.com"
@@ -310,45 +276,41 @@ final class AuthTest: XCTestCase {
         let id = try await auth.createUser(.init(email: email1, password: "123456")).get()
 
         let result = try await auth.updateUser(.init(email: email0), for: id)
-        let error: UpdateUserError = try XCTUnwrap(result.failure)
-        XCTAssertEqual(error.code, .emailExists)
-        XCTAssertNil(error.message)
+        let error: UpdateUserError = try #require(result.failure)
+        #expect(error.code == .emailExists)
+        #expect(error.message == nil)
     }
 
-    func testUpdateUserErrorInvalidPhoneNumber() async throws {
+    @Test func updateUserErrorInvalidPhoneNumber() async throws {
         let auth = try makeAuth()
 
-        let id = try await auth.createUser(
-            .init(
-                email: "testUpdateUserErrorInvalidPhoneNumber@example.com",
-                password: "123456"
-            )
-        ).get()
-        let error = try await XCTUnwrap {
-            try await auth.updateUser(
-                .init(phoneNumber: .set("aaa")), for: id
-            ).failure
-        }
-        XCTAssertEqual(error.code, .invalidPhoneNumber)
-        XCTAssertEqual(error.message, "phone number must be a valid, E.164 compliant identifier")
+        let id = try await auth.createUser(.init(
+            email: "testUpdateUserErrorInvalidPhoneNumber@example.com",
+            password: "123456"
+        )).get()
+        let result = try await auth.updateUser(
+            .init(phoneNumber: .set("aaa")), for: id
+        )
+        let error = try #require(result.failure)
+        #expect(error.code == .invalidPhoneNumber)
+        #expect(error.message == "phone number must be a valid, E.164 compliant identifier")
     }
 
-    func testUpdateUserErrorEmptyPhotoURL() async throws {
+    @Test func updateUserErrorEmptyPhotoURL() async throws {
         let auth = try makeAuth()
         let id = try await auth.createUser(.init(
             email: "testUpdateUserErrorInvalidPhotoURL@example.com",
             password: "123456"
         )).get()
-        let error = try await XCTUnwrap {
-            try await auth.updateUser(
-                .init(photoURL: .set("")), for: id
-            ).failure
-        }
-        XCTAssertEqual(error.code, .invalidPhotoURL)
-        XCTAssertEqual(error.message, "photoURL must be a non-empty string")
+        let result = try await auth.updateUser(
+            .init(photoURL: .set("")), for: id
+        )
+        let error = try #require(result.failure)
+        #expect(error.code == .invalidPhotoURL)
+        #expect(error.message == "photoURL must be a non-empty string")
     }
 
-    func testUpdateUserErrorWeakPassword() async throws {
+    @Test func updateUserErrorWeakPassword() async throws {
         let auth = try makeAuth()
 
         let id = try await auth.createUser(.init(
@@ -356,50 +318,42 @@ final class AuthTest: XCTestCase {
             password: "123456"
         )).get()
         let result = try await auth.updateUser(.init(password: "123"), for: id)
-        let error: UpdateUserError = try XCTUnwrap(result.failure)
-        XCTAssertEqual(error.code, .weakPassword)
-        XCTAssertEqual(error.message, "password must be a string at least 6 characters long")
+        let error: UpdateUserError = try #require(result.failure)
+        #expect(error.code == .weakPassword)
+        #expect(error.message == "password must be a string at least 6 characters long")
     }
 
-    func testSetCustomClaims() async throws {
+    @Test func setCustomClaims() async throws {
         let auth = try makeAuth()
 
-        let uid = try await XCTAssertNoThrow {
-            try await auth.createUser(UserToCreate(
-                email: "testSetCustomClaims@example.com",
-                password: "012345"
-            )).get()
-        }
+        let uid = try await auth.createUser(UserToCreate(
+            email: "testSetCustomClaims@example.com",
+            password: "012345"
+        )).get()
 
-        await XCTAssertNoThrow {
-            try await auth.setCustomUserClaims([
-                "key1": "value1",
-                "key2": "value2",
-            ], for: uid)
-        }
+        try await auth.setCustomUserClaims([
+            "key1": "value1",
+            "key2": "value2",
+        ], for: uid)
 
-        let result = try await XCTUnwrap {
-            try await auth.user(for: uid)
-        }
-        XCTAssertEqual(result.customClaims["key1"], "value1")
-        XCTAssertEqual(result.customClaims["key2"], "value2")
+        let result = try #require(try await auth.user(for: uid))
+        #expect(result.customClaims["key1"] == "value1")
+        #expect(result.customClaims["key2"] == "value2")
     }
 
-    func testDeleteUser() async throws {
+    @Test func deleteUser() async throws {
         let auth = try makeAuth()
 
         let uid = try await auth.createUser(UserToCreate(
             email: "testDeleteUser_\(#line)@example.com",
             password: "012345"
         )).get()
-        let userBeforeRemoved = try await XCTAssertNoThrow { try await auth.user(for: uid) }
-        XCTAssertNotNil(userBeforeRemoved)
+        let userBeforeRemoved = try await auth.user(for: uid)
+        #expect(userBeforeRemoved != nil)
 
-        await XCTAssertNoThrow {
-            try await auth.deleteUser(for: uid)
-        }
+        try await auth.deleteUser(for: uid)
 
-        let userRemoved = try await XCTAssertNoThrow { try await auth.user(for: uid) }
-        XCTAssertNil(userRemoved)
+        let userRemoved = try await auth.user(for: uid)
+        #expect(userRemoved == nil)
     }
 }

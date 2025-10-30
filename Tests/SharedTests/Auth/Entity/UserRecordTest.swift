@@ -1,14 +1,15 @@
 @testable import FirebaseAdmin
-import XCTest
+import Foundation
+import Testing
 
-final class UserRecordTest: XCTestCase {
+@Suite struct UserRecordTest {
     func makeDecoder() -> JSONDecoder {
         let d = JSONDecoder()
         d.dateDecodingStrategy = .secondsSince1970
         return d
     }
 
-    func testGetAccountInfoResponse() throws {
+    @Test func getAccountInfoResponse() throws {
         struct Response: Decodable {
             var users: [UserRecord]
         }
@@ -40,13 +41,12 @@ final class UserRecordTest: XCTestCase {
 """.data(using: .utf8)!
 
         let decoded = try makeDecoder().decode(Response.self, from: json)
-        let user = try XCTUnwrap(decoded.users.first)
-        XCTAssertEqual(user.providers.first?.providerID, "password")
-        XCTAssertGreaterThan(user.createdAt, Date(timeIntervalSince1970: 1638245305))
+        let user = try #require(decoded.users.first)
+        #expect(user.providers.first?.providerID == "password")
+        #expect(user.createdAt > Date(timeIntervalSince1970: 1638245305))
     }
 
-
-    func testManyAttributes() throws {
+    @Test func manyAttributes() throws {
         let json = """
 {
     "localId": "yE2sJxMG6JDacAccEOoDyIgYPyzG",
@@ -83,11 +83,10 @@ final class UserRecordTest: XCTestCase {
 
         let user = try makeDecoder().decode(UserRecord.self, from: json)
 
-        XCTAssertEqual(user.providers.first?.providerID, "password")
-        XCTAssertTrue(user.emailVerified)
-        XCTAssertGreaterThan(user.createdAt, Date(timeIntervalSince1970: 1638245305))
-        XCTAssertEqual(user.customClaims["custom"], "value")
-        XCTAssertGreaterThan(try XCTUnwrap(user.lastRefreshAt), Date(timeIntervalSince1970: 1638245305))
-
+        #expect(user.providers.first?.providerID == "password")
+        #expect(user.emailVerified)
+        #expect(user.createdAt > Date(timeIntervalSince1970: 1638245305))
+        #expect(user.customClaims["custom"] == "value")
+        #expect(try #require(user.lastRefreshAt) > Date(timeIntervalSince1970: 1638245305))
     }
 }

@@ -1,54 +1,34 @@
+import Foundation
 @testable import GoogleCloud
 import NIOPosix
-import XCTest
+import Testing
 
-final class BucketTest: XCTestCase {
-    private static let client = try! GCPClient(credentialFactory: .custom { _ in
-        MockCredential()
-    })
-
-    override class func setUp() {
-        super.setUp()
-        initLogger()
-    }
-
-    override class func tearDown() {
-        do {
-            try client.syncShutdown()
-        } catch {
-            XCTFail("\(error)")
-        }
-
-        super.tearDown()
-    }
-
-    override func setUpWithError() throws {
-        try super.setUpWithError()
-        try XCTSkipIf(ProcessInfo.processInfo.environment[storageEmulatorHostEnvVar] == nil, "BucketTest uses Cloud Storage Emulator.")
-    }
-
+@Suite(
+    .gcpClient,
+    .enabled(if: ProcessInfo.processInfo.environment[storageEmulatorHostEnvVar] != nil, "BucketTest uses Cloud Storage Emulator.")
+) struct BucketTest: ~Copyable {
     private func makeBucket() -> Bucket {
-        Storage(client: Self.client)
+        Storage(client: .mockCredentialClient)
             .bucket(name: "test-bucket")
     }
 
-    func testFiles() async throws {
+    @Test func files() async throws {
         let bucket = makeBucket()
 
         let response = try await bucket.files(prefix: "testFiles/")
-        XCTAssertEqual(Set(response.map(\.name)), ["testFiles/bar.png", "testFiles/baz.jpg"])
+        #expect(Set(response.map(\.name)) == ["testFiles/bar.png", "testFiles/baz.jpg"])
     }
 
-    func testUpload() async throws {
+    @Test func upload() async throws {
         let bucket = makeBucket()
 
         let name = "testUpload/foo??bar.txt"
         let data = Data(name.utf8)
         let response = try await bucket.uploadSimple(name: name, media: data)
-        XCTAssertEqual(response.name, name)
+        #expect(response.name == name)
     }
 
-    func testDelete() async throws {
+    @Test func delete() async throws {
         let bucket = makeBucket()
 
         let names = [
@@ -60,11 +40,11 @@ final class BucketTest: XCTestCase {
             let data = Data(name.utf8)
             _ = try await bucket.uploadSimple(name: name, media: data)
             let files = try await bucket.files(prefix: name)
-            XCTAssertFalse(files.isEmpty)
+            #expect(!files.isEmpty)
 
             try await bucket.delete(name: name)
             let filesAfter = try await bucket.files(prefix: name)
-            XCTAssertTrue(filesAfter.isEmpty)
+            #expect(filesAfter.isEmpty)
         }
     }
 }
