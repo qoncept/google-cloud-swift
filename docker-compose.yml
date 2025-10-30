@@ -1,9 +1,9 @@
 services:
   cloudstorage:
     image: fsouza/fake-gcs-server
-    ports: 
+    ports:
       - "4443:4443"
-    volumes: 
+    volumes:
       - ./fixtures/storage:/data
     command: -scheme http
   firebase:
@@ -15,6 +15,7 @@ services:
     command: firebase emulators:start --only auth -P testing-project-id
   bigquery:
     image: ghcr.io/goccy/bigquery-emulator:latest
+    platform: linux/amd64
     ports:
       - 9050:9050
     volumes:

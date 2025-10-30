@@ -234,4 +234,8 @@ public struct Auth: Sendable {
             responseType: ListUserResult.self
         )
     }
+
+    public func customToken(uid: String) async throws -> String {
+        fatalError("TODO")
+    }
 }

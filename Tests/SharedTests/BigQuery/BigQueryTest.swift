@@ -1,40 +1,20 @@
+import Foundation
 @testable import GoogleCloud
 import NIOPosix
-import XCTest
+import Testing
 
-final class BigQueryTest: XCTestCase {
-    private static let client = try! GCPClient(credentialFactory: .custom { _ in
-        MockCredential()
-    })
-
-    override class func setUp() {
-        super.setUp()
-        initLogger()
-    }
-
-    override class func tearDown() {
-        do {
-            try client.syncShutdown()
-        } catch {
-            XCTFail("\(error)")
-        }
-
-        super.tearDown()
-    }
-
-    override func setUpWithError() throws {
-        try super.setUpWithError()
-        try XCTSkipIf(ProcessInfo.processInfo.environment[bigqueryEmulatorHostEnvVar] == nil, "BigQueryTest uses BigQuery Emulator.")
-    }
-
+@Suite(
+    .gcpClient,
+    .enabled(if: ProcessInfo.processInfo.environment[bigqueryEmulatorHostEnvVar] != nil, "BigQueryTest uses BigQuery Emulator.")
+) struct BigQueryTest {
     private func makeBigQuery() -> BigQuery {
         BigQuery(
-            client: Self.client,
+            client: .mockCredentialClient,
             projectID: "testing-project-id"
         )
     }
 
-    func testBigQueryQueryResponseDecode() throws {
+    @Test func bigQueryQueryResponseDecode() throws {
         let data = #"""
 {"jobReference":{"jobId":"coyNAgTg6wfkrPHVDRqlyhov5UQ","projectId":"testing-project-id"},"schema":{"fields":[{"name":"id","type":"INTEGER"},{"name":"name","type":"STRING"},{"fields":[{"name":"key","type":"STRING"},{"name":"value","type":"JSON"}],"mode":"REPEATED","name":"structarr","type":"RECORD"},{"name":"birthday","type":"DATE"},{"name":"skillNum","type":"NUMERIC"},{"name":"created_at","type":"TIMESTAMP"}]},"rows":[{"f":[{"v":"1"},{"v":"alice"},{"v":[{"v":{"f":[{"v":"profile"},{"v":"{\"age\": 10}"}]}}]},{"v":"2012-01-01"},{"v":"3"},{"v":"1641038400.0"}]},{"f":[{"v":"2"},{"v":"bob"},{"v":[{"v":{"f":[{"v":"profile"},{"v":"{\"age\": 15}"}]}}]},{"v":"2007-02-01"},{"v":null},{"v":"1641146400.0"}]}],"totalRows":"2","jobComplete":true}
 """#.data(using: .utf8)!
@@ -42,7 +22,7 @@ final class BigQueryTest: XCTestCase {
         let _ = try JSONDecoder().decode(BigQueryQueryResponse.self, from: data)
     }
 
-    func testBasic() async throws {
+    @Test func basic() async throws {
         let bigQuery = makeBigQuery()
 
         struct Row: Decodable {
@@ -56,15 +36,15 @@ final class BigQueryTest: XCTestCase {
             decoding: Row.self
         )
 
-        XCTAssertEqual(rows.count, 2)
-        XCTAssertEqual(rows[0].id, 1)
-        XCTAssertEqual(rows[0].name, "alice")
-        XCTAssertEqual(rows[0].skillNum, 3)
-        XCTAssertEqual(rows[0].created_at, Date(timeIntervalSince1970: 1641038400))
-        XCTAssertEqual(rows[1].skillNum, nil)
+        #expect(rows.count == 2)
+        #expect(rows[0].id == 1)
+        #expect(rows[0].name == "alice")
+        #expect(rows[0].skillNum == 3)
+        #expect(rows[0].created_at == Date(timeIntervalSince1970: 1641038400))
+        #expect(rows[1].skillNum == nil)
     }
 
-    func testDecodePrimitives() async throws {
+    @Test func decodePrimitives() async throws {
         let bigQuery = makeBigQuery()
 
         struct Row: Decodable {
@@ -88,17 +68,17 @@ final class BigQueryTest: XCTestCase {
                 , CURRENT_DATETIME() AS `datetime`
         """, decoding: Row.self)
 
-        XCTAssertEqual(rows.count, 1)
-        XCTAssertEqual(rows[0].bool, true)
-        XCTAssertEqual(rows[0].int, 1)
-        XCTAssertEqual(rows[0].float, 0.5)
-        XCTAssertEqual(rows[0].string, "hello")
-        XCTAssertEqual(rows[0].optional, nil)
-        XCTAssertEqual(rows[0].timestamp.timeIntervalSince1970, now.timeIntervalSince1970, accuracy: 1)
-        XCTAssertEqual(rows[0].datetime.timeIntervalSince1970, now.timeIntervalSince1970, accuracy: 1)
+        #expect(rows.count == 1)
+        #expect(rows[0].bool == true)
+        #expect(rows[0].int == 1)
+        #expect(rows[0].float == 0.5)
+        #expect(rows[0].string == "hello")
+        #expect(rows[0].optional == nil)
+        #expect(abs(rows[0].timestamp.timeIntervalSince1970 - now.timeIntervalSince1970) < 1)
+        #expect(abs(rows[0].datetime.timeIntervalSince1970 - now.timeIntervalSince1970) < 1)
     }
 
-    func testParameter() async throws {
+    @Test func parameter() async throws {
         let bigQuery = makeBigQuery()
 
         struct Row: Decodable {
@@ -112,7 +92,7 @@ final class BigQueryTest: XCTestCase {
             decoding: Row.self
         )
 
-        XCTAssertEqual(rows.count, 1)
-        XCTAssertEqual(rows[0].id, 1)
+        #expect(rows.count == 1)
+        #expect(rows[0].id == 1)
     }
 }

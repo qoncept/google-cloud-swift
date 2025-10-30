@@ -1,14 +1,15 @@
 @testable import FirebaseAdmin
-import XCTest
+import Foundation
+import Testing
 
-final class FirebaseAuthTokenTest: XCTestCase {
+@Suite struct FirebaseAuthTokenTest {
     func makeDecoder() -> JSONDecoder {
         let d = JSONDecoder()
         d.dateDecodingStrategy = .secondsSince1970
         return d
     }
 
-    func testCustomClaim() throws {
+    @Test func customClaim() throws {
         let json = """
 {
   "name": "Kenta Okamura",
@@ -36,8 +37,8 @@ final class FirebaseAuthTokenTest: XCTestCase {
 
         let decoded = try makeDecoder().decode(FirebaseAuthToken.self, from: json)
 
-        XCTAssertEqual(decoded.name, "Kenta Okamura")
-        XCTAssertEqual(decoded.claims["mykey"], "custom claim")
-        XCTAssertTrue(decoded.isEmailVerified)
+        #expect(decoded.name == "Kenta Okamura")
+        #expect(decoded.claims["mykey"] == "custom claim")
+        #expect(decoded.isEmailVerified)
     }
 }
