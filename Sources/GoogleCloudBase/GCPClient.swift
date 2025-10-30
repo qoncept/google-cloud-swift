@@ -76,9 +76,16 @@ public struct GCPClient: Sendable {
         (httpClient, httpClientCompressionEnabled) = httpClientProvider.build(logger: clientLogger)
         self.clientLogger = clientLogger
         self.options = options
-        self.credential = try credentialFactory.makeCredential(
-            context: .init(httpClient: httpClient, logger: clientLogger)
-        )
+        do {
+            self.credential = try credentialFactory.makeCredential(
+                context: .init(httpClient: httpClient, logger: clientLogger)
+            )
+        } catch {
+            Task { [httpClient, httpClientProvider] in
+                try await Self.shutdownHTTPClient(client: httpClient, provider: httpClientProvider)
+            }
+            throw error
+        }
     }
 
     @_disfavoredOverload
@@ -124,18 +131,25 @@ public struct GCPClient: Sendable {
             throw GCPClientError.alreadyShutdown
         }
 
-        switch httpClientProvider {
+        do {
+            try await Self.shutdownHTTPClient(client: httpClient, provider: httpClientProvider)
+        } catch {
+            clientLogger.log(level: self.options.errorLogLevel, "Error shutting down HTTP client", metadata: [
+                "aws-error": "\(error)",
+            ])
+            throw error
+        }
+    }
+
+    private static func shutdownHTTPClient(
+        client: HTTPClient,
+        provider: HTTPClientProvider
+    ) async throws {
+        switch provider {
         case .shared:
             return
         case .createNew, .createNewWithEventLoopGroup:
-            do {
-                try await httpClient.shutdown()
-            } catch {
-                clientLogger.log(level: self.options.errorLogLevel, "Error shutting down HTTP client", metadata: [
-                    "aws-error": "\(error)",
-                ])
-                throw error
-            }
+            try await client.shutdown()
         }
     }
 }
