@@ -137,7 +137,7 @@ public struct Auth: Sendable {
 
     private func user(
         request: GetUserRequest,
-        logger: Logger?
+        logger: Logger? = nil
     ) async throws -> UserRecord? {
         let path = "/accounts:lookup"
         let res = try await baseClient.post(
