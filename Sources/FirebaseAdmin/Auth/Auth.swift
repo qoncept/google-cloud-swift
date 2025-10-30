@@ -51,7 +51,7 @@ public struct Auth: Sendable {
         projectID paramProjectID: String? = nil
     ) throws {
         var credential = client.credential
-        var baseURL: URL
+        let baseURL: URL
         guard let projectID = paramProjectID ?? Self.projectID(from: credential) else {
             throw AuthError(message: "projectID must be provided if the credential doesn't have it.")
         }
