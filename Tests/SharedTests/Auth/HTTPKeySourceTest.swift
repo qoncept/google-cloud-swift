@@ -15,8 +15,7 @@ import Testing
         let source = makeKeySource()
 
         let keys = try await source.publicKeys()
-        let key = try await keys.getKey()
-        #expect(key != nil)
+        _ = try await keys.getKey()
     }
 
     @Test func refreshKeys() async throws {
@@ -29,31 +28,26 @@ import Testing
         }
 
         do {
-            let keys = try await source.publicKeys()
-            #expect(keys != nil)
+            let _ = try await source.publicKeys()
             #expect(refreshCalled.load(ordering: .relaxed) == 1)
         }
         do {
-            let keys = try await source.publicKeys()
-            #expect(keys != nil)
+            let _ = try await source.publicKeys()
             #expect(refreshCalled.load(ordering: .relaxed) == 1)
         }
         do {
-            let keys = try await source.publicKeys()
-            #expect(keys != nil)
+            let _ = try await source.publicKeys()
             #expect(refreshCalled.load(ordering: .relaxed) == 1)
         }
 
         mockClock.nowValue?.addTimeInterval(60 * 60 * 24)
 
         do {
-            let keys = try await source.publicKeys()
-            #expect(keys != nil)
+            let _ = try await source.publicKeys()
             #expect(refreshCalled.load(ordering: .relaxed) == 2)
         }
         do {
-            let keys = try await source.publicKeys()
-            #expect(keys != nil)
+            let _ = try await source.publicKeys()
             #expect(refreshCalled.load(ordering: .relaxed) == 2)
         }
     }
