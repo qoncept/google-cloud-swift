@@ -46,7 +46,10 @@ fileprivate struct FirebaseCustomTokenPayload: JWTPayload {
     let client = try GCPClient(credentialFactory: .json(data: dummyServiceAccountJSON))
     defer { Task { try await client.shutdown() } }
     
-    let auth = try Auth(client: client)
+    let auth = try Auth(
+        client: client,
+        baseURL: URL(string: "http://localhost/")! // avoid credential override
+    )
     let token = try await auth.customToken(uid: "testing-uid")
 //    print(token)
 
