@@ -1,7 +1,7 @@
 import FirebaseAdmin
 import Foundation
 
-final class MockCredential: Credential, @unchecked Sendable {
+actor MockCredential: Credential {
     struct UndefinedError: Error {}
 
     var getAccessTokenCalled: Int = 0
@@ -10,7 +10,7 @@ final class MockCredential: Credential, @unchecked Sendable {
 
     func getAccessToken() async throws -> AccessToken {
         getAccessTokenCalled += 1
-        try await Task.sleep(nanoseconds: UInt64(getAccessTokenDelay * 1000 * 1000 * 1000))
+        try await Task.sleep(for: .seconds(getAccessTokenDelay))
         return try getAccessTokenResult.get()
     }
 }

@@ -10,6 +10,7 @@ package struct EmulatorCredential: RichCredential & Sendable {
     package var projectID: String { "testing-project-id" }
 
     package func sign(data: Data) async throws -> Data {
-        data
+        struct EmulatorCredentialCannotSign: Error {}
+        throw EmulatorCredentialCannotSign()
     }
 }

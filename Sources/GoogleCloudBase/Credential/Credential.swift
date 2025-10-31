@@ -10,6 +10,7 @@ public protocol Credential: Sendable {
 public protocol RichCredential: Credential {
     var clientEmail: String { get }
     var projectID: String { get }
+    /// must sign with RS256 algorithm
     func sign(data: Data) async throws -> Data
 }
 
