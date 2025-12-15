@@ -12,7 +12,7 @@ public struct Bucket: Sendable {
         self.authorizedClient = authorizedClient
     }
 
-    // INFO: https://cloud.google.com/storage/docs/json_api/v1/objects/list
+    // INFO: https://docs.cloud.google.com/storage/docs/json_api/v1/objects/list
     public func files(
         prefix: String,
         logger: Logger? = nil
@@ -30,7 +30,22 @@ public struct Bucket: Sendable {
         ).items ?? []
     }
 
-    // INFO: https://cloud.google.com/storage/docs/json_api/v1/objects/delete
+    // INFO: https://docs.cloud.google.com/storage/docs/json_api/v1/objects/move
+    @discardableResult
+    public func move(
+        src: String,
+        dst: String,
+        logger: Logger? = nil
+    ) async throws -> StorageFile {
+        return try await authorizedClient.execute(
+            method: .POST,
+            path: "storage/v1/b/\(bucketName)/o/\(src.choppingSlashPrefix)/moveTo/o/\(dst.choppingSlashPrefix)",
+            logger: logger,
+            responseType: StorageFile.self
+        )
+    }
+
+    // INFO: https://docs.cloud.google.com/storage/docs/json_api/v1/objects/delete
     public func delete(
         name: String,
         logger: Logger? = nil
@@ -38,7 +53,7 @@ public struct Bucket: Sendable {
         let name = Self.nameOnPath(name: name)
         _ = try await authorizedClient.execute(
             method: .DELETE,
-            path: "storage/v1/b/\(bucketName)/o" + (name.hasPrefix("/") ? name : "/" + name),
+            path: "storage/v1/b/\(bucketName)/o/\(name.choppingSlashPrefix)",
             logger: logger
         )
     }

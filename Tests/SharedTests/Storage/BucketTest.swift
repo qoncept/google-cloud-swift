@@ -19,6 +19,26 @@ import Testing
         #expect(Set(response.map(\.name)) == ["testFiles/bar.png", "testFiles/baz.jpg"])
     }
 
+    @Test(.disabled("fake-gcs-server doesn't support 'move'."))
+    func move() async throws {
+        let bucket = makeBucket()
+
+        let srcName = "testMove/src/Foo.txt"
+        let dstName = "testMove/dst/Foo_renamed.txt"
+        _ = try await bucket.uploadSimple(name: srcName, media: Data(#function.utf8))
+
+        let filesBefore = try await bucket.files(prefix: srcName)
+        #expect(!filesBefore.isEmpty)
+
+        let movedFile = try await bucket.move(src: srcName, dst: dstName)
+        #expect(movedFile.name == dstName)
+
+        let filesAfterSrc = try await bucket.files(prefix: srcName)
+        #expect(filesAfterSrc.isEmpty)
+        let filesAfterDst = try await bucket.files(prefix: dstName)
+        #expect(!filesAfterDst.isEmpty)
+    }
+
     @Test func upload() async throws {
         let bucket = makeBucket()
 
