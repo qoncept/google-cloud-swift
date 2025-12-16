@@ -56,7 +56,7 @@ public struct GCPClient: Sendable {
 
         public init(
             requestLogLevel: Logger.Level = .debug,
-            errorLogLevel: Logger.Level = .debug
+            errorLogLevel: Logger.Level = .error
         ) {
             self.requestLogLevel = requestLogLevel
             self.errorLogLevel = errorLogLevel

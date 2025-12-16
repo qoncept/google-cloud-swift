@@ -77,9 +77,10 @@ package struct AuthorizedClient: Sendable {
                     if let data = resBody.getData(at: resBody.readerIndex, length: resBody.readableBytes),
                        let string = String(data: data, encoding: .utf8) {
                         // 404のときなど、JSONでないレスポンスが返ることがある
-                        throw ErrorResponse(error: .init(code: Int(res.status.code), message: string))
+                        errorResponse = ErrorResponse(error: .init(code: Int(res.status.code), message: string))
+                    } else {
+                        throw error
                     }
-                    throw error
                 }
                 throw errorResponse
             }
