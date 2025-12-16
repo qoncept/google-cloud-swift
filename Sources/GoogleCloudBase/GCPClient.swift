@@ -99,9 +99,16 @@ public struct GCPClient: Sendable {
         (httpClient, httpClientCompressionEnabled) = httpClientProvider.build(logger: clientLogger)
         self.clientLogger = clientLogger
         self.options = options
-        self.credential = try await credentialFactory.makeCredential(
-            context: .init(httpClient: httpClient, logger: clientLogger)
-        )
+        do {
+            self.credential = try await credentialFactory.makeCredential(
+                context: .init(httpClient: httpClient, logger: clientLogger)
+            )
+        } catch {
+            Task { [httpClient, httpClientProvider] in
+                try await Self.shutdownHTTPClient(client: httpClient, provider: httpClientProvider)
+            }
+            throw error
+        }
     }
 
     @available(*, noasync, message: "syncShutdown() can block indefinitely, prefer shutdown()", renamed: "shutdown()")
