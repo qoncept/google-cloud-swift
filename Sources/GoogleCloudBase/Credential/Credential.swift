@@ -14,10 +14,13 @@ public protocol RichCredential: Credential {
     func sign(data: Data) async throws -> Data
 }
 
-struct CredentialError: Error, CustomStringConvertible, LocalizedError {
-    var message: String
-    var description: String { message }
-    var errorDescription: String? { message }
+public struct CredentialError: Error, CustomStringConvertible, LocalizedError {
+    public init(message: String) {
+        self.message = message
+    }
+    public var message: String
+    public var description: String { message }
+    public var errorDescription: String? { message }
 }
 
 private struct CredentialsFile: Decodable {
