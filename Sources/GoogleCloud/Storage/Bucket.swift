@@ -37,9 +37,11 @@ public struct Bucket: Sendable {
         dst: String,
         logger: Logger? = nil
     ) async throws -> StorageFile {
+        let src = Self.nameOnPath(name: src)
+        let dst = Self.nameOnPath(name: dst)
         return try await authorizedClient.execute(
             method: .POST,
-            path: "storage/v1/b/\(bucketName)/o/\(src.choppingSlashPrefix)/moveTo/o/\(dst.choppingSlashPrefix)",
+            path: "storage/v1/b/\(bucketName)/o/\(src)/moveTo/o/\(dst)",
             logger: logger,
             responseType: StorageFile.self
         )
@@ -53,7 +55,7 @@ public struct Bucket: Sendable {
         let name = Self.nameOnPath(name: name)
         _ = try await authorizedClient.execute(
             method: .DELETE,
-            path: "storage/v1/b/\(bucketName)/o/\(name.choppingSlashPrefix)",
+            path: "storage/v1/b/\(bucketName)/o/\(name)",
             logger: logger
         )
     }
@@ -90,7 +92,9 @@ public struct Bucket: Sendable {
     // INFO: https://cloud.google.com/storage/docs/request-endpoints#encoding
     static func nameOnPath(name: String) -> String {
         let targets = CharacterSet(charactersIn: " !#$&'()*+,/:;=?@[]")
-        return name.addingPercentEncoding(withAllowedCharacters: targets.inverted)!
+        return name
+            .choppingSlashPrefix
+            .addingPercentEncoding(withAllowedCharacters: targets.inverted)!
     }
 }
 
