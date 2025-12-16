@@ -9,38 +9,38 @@ public protocol AsyncCredentialFactoryProtocol: Sendable {
 public struct AsyncCredentialFactory: AsyncCredentialFactoryProtocol {
     public typealias Context = CredentialFactoryContext
 
-    private var cb: @Sendable (Context) async throws -> any Credential
-    init(cb: @Sendable @escaping (Context) async throws -> any Credential) {
-        self.cb = cb
+    private var make: @Sendable (Context) async throws -> any Credential
+    init(make: @Sendable @escaping (Context) async throws -> any Credential) {
+        self.make = make
     }
     init(next: @escaping @Sendable (Context) async throws -> AsyncCredentialFactory) {
-        self.cb = { context in
+        self.make = { context in
             let factory = try await next(context)
             return try await factory.makeCredential(context: context)
         }
     }
 
     public func makeCredential(context: Context) async throws -> any Credential {
-        try await cb(context)
+        try await make(context)
     }
 }
 
 public struct SyncCredentialFactory: AsyncCredentialFactoryProtocol {
     public typealias Context = CredentialFactoryContext
 
-    private var cb: @Sendable (Context) throws -> any Credential
-    init(cb: @Sendable @escaping (Context) throws -> any Credential) {
-        self.cb = cb
+    private var make: @Sendable (Context) throws -> any Credential
+    init(make: @Sendable @escaping (Context) throws -> any Credential) {
+        self.make = make
     }
     init(next: @escaping @Sendable (Context) throws -> SyncCredentialFactory) {
-        self.cb = { context in
+        self.make = { context in
             let factory = try next(context)
             return try factory.makeCredential(context: context)
         }
     }
 
     public func makeCredential(context: Context) throws -> any Credential {
-        try cb(context)
+        try make(context)
     }
 }
 
@@ -55,7 +55,7 @@ public struct CredentialFactoryContext {
 
 extension SyncCredentialFactory {
     public static func custom(_ factory: @Sendable @escaping (Context) throws -> any Credential) -> SyncCredentialFactory {
-        SyncCredentialFactory(cb: factory)
+        SyncCredentialFactory(make: factory)
     }
 
     public static func `static`(base64EncodedString string: String) -> SyncCredentialFactory {
@@ -92,8 +92,10 @@ extension SyncCredentialFactory {
                 return try ServiceAccountCredential(credentialsFileData: data, httpClient: context.httpClient)
             case "authorized_user":
                 return try RefreshTokenCredential(credentialsFileData: data, httpClient: context.httpClient)
+            case "external_account":
+                throw CredentialError(message: "'external_account' is not yet supported")
             default:
-                throw CredentialError(message: "Invalid contents in the credentials file")
+                throw CredentialError(message: "Unknown credential type: \(credentialsFile.type)")
             }
         }
     }
@@ -140,7 +142,7 @@ extension SyncCredentialFactory {
                     errors.append(error)
                 }
             }
-            throw CredentialError(message: "no avaliable credentials. errors=[\(errors.map({ "\($0)" }).joined(separator: ", "))]")
+            throw CredentialError(message: "no avaliable credentials. errors=[\(errors.map({ "\"\($0)\"" }).joined(separator: ", "))]")
         }
     }
 
@@ -161,7 +163,7 @@ extension AsyncCredentialFactoryProtocol where Self == AsyncCredentialFactory {
     }
 
     public static func custom(_ factory: @Sendable @escaping (CredentialFactoryContext) async throws -> any Credential) ->  AsyncCredentialFactory {
-        AsyncCredentialFactory(cb: factory)
+        AsyncCredentialFactory(make: factory)
     }
 
     public static var computeEngine: AsyncCredentialFactory {
@@ -180,7 +182,7 @@ extension AsyncCredentialFactoryProtocol where Self == AsyncCredentialFactory {
                     errors.append(error)
                 }
             }
-            throw CredentialError(message: "no avaliable credentials. errors=[\(errors.map({ "\($0)" }).joined(separator: ", "))]")
+            throw CredentialError(message: "no avaliable credentials. errors=[\(errors.map({ "\"\($0)\"" }).joined(separator: ", "))]")
         }
     }
 }
