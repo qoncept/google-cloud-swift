@@ -14,3 +14,9 @@ actor MockCredential: Credential {
         return try getAccessTokenResult.get()
     }
 }
+
+extension SyncCredentialFactory {
+    static func mock(credential: MockCredential = MockCredential()) -> SyncCredentialFactory {
+        return .custom { _ in credential }
+    }
+}

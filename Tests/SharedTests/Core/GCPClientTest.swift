@@ -23,6 +23,31 @@ import Testing
     }
 }
 
+#if ServiceLifecycleSupport
+
+import Logging
+import ServiceLifecycle
+
+extension GCPClientTest {
+    @Test func serviceLifecycle() async throws {
+        let logger = Logger(label: "GCPClientTest.\(#function)")
+
+        let client = try GCPClient(credentialFactory: .mock(), logger: logger)
+        let serviceGroup = ServiceGroup(services: [client], logger: logger)
+
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask(priority: .high) {
+                try await serviceGroup.run()
+            }
+            group.addTask(priority: .low) {
+                await serviceGroup.triggerGracefulShutdown()
+            }
+            try await group.waitForAll()
+        }
+    }
+}
+#endif  // ServiceLifecycleSupport
+
 func gcpClientOverload() throws {
     _ = try GCPClient(credentialFactory: .selector(.environment, .configFile))
 }

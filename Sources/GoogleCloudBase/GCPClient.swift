@@ -2,6 +2,7 @@ import AsyncHTTPClient
 import Atomics
 import NIO
 import NIOConcurrencyHelpers
+import NIOHTTPCompression
 import Logging
 import Foundation
 
@@ -19,27 +20,22 @@ public struct GCPClient: Sendable {
 
     public enum HTTPClientProvider: Sendable {
         case shared(HTTPClient)
-        case createNewWithEventLoopGroup(any EventLoopGroup)
-        case createNew
+        case createNewWithEventLoopGroup(any EventLoopGroup, HTTPClient.Configuration = .gcpClientDefault)
+        case createNew(HTTPClient.Configuration = .gcpClientDefault)
 
         func build(logger: Logger?) -> (HTTPClient, compressionEnabled: Bool) {
-            var httpClientConfig = AsyncHTTPClient.HTTPClient.Configuration(
-                timeout: .init(connect: .seconds(10)),
-                decompression: .enabled(limit: .none) // INFO: decompression limit has serious bug so not usable. https://github.com/apple/swift-nio-extras/pull/221
-            )
-            httpClientConfig.httpVersion = .http1Only // INFO: AHC or NIO may be wrong somewhere and sometimes not correctly handle gziped responses in http/2
             switch self {
             case .shared(let providedHTTPClient):
                 return (providedHTTPClient, false)
-            case .createNewWithEventLoopGroup(let elg):
-                let httpClient = AsyncHTTPClient.HTTPClient(
+            case .createNewWithEventLoopGroup(let elg, let httpClientConfig):
+                let httpClient = HTTPClient(
                     eventLoopGroupProvider: .shared(elg),
                     configuration: httpClientConfig,
                     backgroundActivityLogger: logger ?? GCPClient.loggingDisabled
                 )
                 return (httpClient, true)
-            case .createNew:
-                let httpClient = AsyncHTTPClient.HTTPClient(
+            case .createNew(let httpClientConfig):
+                let httpClient = HTTPClient(
                     eventLoopGroupProvider: .singleton,
                     configuration: httpClientConfig,
                     backgroundActivityLogger: logger ?? GCPClient.loggingDisabled
@@ -69,7 +65,7 @@ public struct GCPClient: Sendable {
     public init(
         credentialFactory: SyncCredentialFactory,
         options: Options = Options(),
-        httpClientProvider: HTTPClientProvider = .createNew,
+        httpClientProvider: HTTPClientProvider = .createNew(),
         logger clientLogger: Logger = Self.loggingDisabled
     ) throws {
         self.httpClientProvider = httpClientProvider
@@ -92,7 +88,7 @@ public struct GCPClient: Sendable {
     public init(
         credentialFactory: some AsyncCredentialFactoryProtocol = .applicationDefault,
         options: Options = Options(),
-        httpClientProvider: HTTPClientProvider = .createNew,
+        httpClientProvider: HTTPClientProvider = .createNew(),
         logger clientLogger: Logger = Self.loggingDisabled
     ) async throws {
         self.httpClientProvider = httpClientProvider
@@ -158,5 +154,16 @@ public struct GCPClient: Sendable {
         case .createNew, .createNewWithEventLoopGroup:
             try await client.shutdown()
         }
+    }
+}
+
+extension HTTPClient.Configuration {
+    public static var gcpClientDefault: HTTPClient.Configuration {
+        var httpClientConfig = AsyncHTTPClient.HTTPClient.Configuration(
+            timeout: .init(connect: .seconds(10)),
+            decompression: .enabled(limit: .ratio(10))
+        )
+        httpClientConfig.httpVersion = .http1Only // INFO: AHC or NIO may be wrong somewhere and sometimes not correctly handle gziped responses in http/2
+        return httpClientConfig
     }
 }
