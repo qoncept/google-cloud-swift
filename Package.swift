@@ -29,6 +29,11 @@ let package = Package(
                 .product(name: "_CryptoExtras", package: "swift-crypto"),
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
                 .product(name: "JWTKit", package: "jwt-kit"),
+                .product(
+                    name: "ServiceLifecycle",
+                    package: "swift-service-lifecycle",
+                    condition: .when(traits: ["ServiceLifecycleSupport"])
+                ),
             ]
         ),
         .target(
@@ -36,11 +41,6 @@ let package = Package(
             dependencies: [
                 "GoogleCloudBase",
                 .product(name: "AsyncHTTPClient", package: "async-http-client"),
-                .product(
-                    name: "ServiceLifecycle",
-                    package: "swift-service-lifecycle",
-                    condition: .when(traits: ["ServiceLifecycleSupport"])
-                ),
             ]
         ),
         .target(

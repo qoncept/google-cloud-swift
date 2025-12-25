@@ -12,22 +12,21 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        swift: ["6.0", "6.2"]
+        swift: ["6.2"]
     steps:
+      - uses: actions/checkout@v6
       - uses: vapor/swiftly-action@v0.2
         with:
           toolchain: ${{ matrix.swift }}
-      - uses: actions/checkout@v4
       - name: start emulator servers
         run: docker compose up -d
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: |
             .build/checkouts
             .build/repositories
           key: google-cloud-swift_build_${{ runner.os }}_${{ hashFiles('Package.resolved') }}
       - run: swift build
-      - if: matrix.swift == '6.2' # swift 6.0 does not support test scoping yet
-        name: Run test
+      - name: Run test
         run: ./run_test.sh
 
