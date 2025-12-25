@@ -17,9 +17,7 @@ struct GCPClientTrait: SuiteTrait, TestScoping {
     ) async throws {
         initLogger()
 
-        let client = try GCPClient(credentialFactory: .custom { _ in
-            MockCredential()
-        })
+        let client = try GCPClient(credentialFactory: .mock())
 
         var didShutdown = false
         defer {
