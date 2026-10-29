@@ -1,5 +1,5 @@
 import AsyncHTTPClient
-import Foundation
+import FoundationEssentials
 import GoogleCloudBase
 import Logging
 import NIOFoundationCompat
