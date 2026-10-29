@@ -25,7 +25,7 @@ FCM API を有効にし、送信権限のある認証情報を設定する。
 
 ```swift
 import FirebaseAdmin
-import FoundationEssentials
+import Foundation
 
 let client = try GCPClient(credentialFactory: .json(data: serviceAccountJSON))
 let messaging = try Messaging(client: client, projectID: "example-project")

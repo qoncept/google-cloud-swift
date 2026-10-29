@@ -1,4 +1,4 @@
-import FoundationEssentials
+import Foundation
 
 /// A message sent through Firebase Cloud Messaging HTTP v1.
 public struct Message: Encodable, Sendable {
