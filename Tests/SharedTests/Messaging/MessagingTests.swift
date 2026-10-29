@@ -11,12 +11,12 @@ import Testing
     @Test func encodesTargetsAndPayload() throws {
         let targets: [(Message.Target, String)] = [(.token("device"), "token"), (.topic("news"), "topic"), (.condition("'news' in topics"), "condition")]
         for (target, key) in targets {
-            let message = Message(target: target, notification: .init(title: "Title", body: "Body"),
+            let message = Message(target: target, notification: .init(title: "Title", body: "Body", image: URL(string: "https://example.com/image.png")!),
                                   data: ["payload": "{\"id\":1}"], android: .init(priority: .high, ttl: "120s"))
             let json = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(message)) as? [String: Any])
             #expect(json[key] != nil)
             #expect(["token", "topic", "condition"].filter { json[$0] != nil }.count == 1)
-            #expect((json["notification"] as? [String: String]) == ["title": "Title", "body": "Body"])
+            #expect((json["notification"] as? [String: String]) == ["title": "Title", "body": "Body", "image": "https://example.com/image.png"])
             #expect((json["data"] as? [String: String]) == ["payload": "{\"id\":1}"])
             #expect((json["android"] as? [String: String]) == ["priority": "HIGH", "ttl": "120s"])
         }
