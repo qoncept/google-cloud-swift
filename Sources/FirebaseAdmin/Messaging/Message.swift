@@ -1,3 +1,5 @@
+import Foundation
+
 /// A message sent through Firebase Cloud Messaging HTTP v1.
 public struct Message: Encodable, Sendable {
     /// Exactly one recipient is required by FCM.
@@ -10,9 +12,10 @@ public struct Message: Encodable, Sendable {
     public struct Notification: Encodable, Sendable {
         public var title: String?
         public var body: String?
-        public var image: String?
+        /// The URL of an image to display in the notification.
+        public var image: URL?
 
-        public init(title: String? = nil, body: String? = nil, image: String? = nil) {
+        public init(title: String? = nil, body: String? = nil, image: URL? = nil) {
             self.title = title
             self.body = body
             self.image = image
