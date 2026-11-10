@@ -2,7 +2,6 @@ import Foundation
 
 /// A message sent through Firebase Cloud Messaging HTTP v1.
 public struct Message: Encodable, Sendable {
-    /// Exactly one recipient is required by FCM.
     public enum Target: Sendable {
         case token(String)
         case topic(String)
