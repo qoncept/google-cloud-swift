@@ -1,0 +1,23 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/v1/projects/testing-project-id/messages:send",
+    "headers": {
+      "Authorization": { "equalTo": "Bearer test-access-token" },
+      "Content-Type": { "equalTo": "application/json" }
+    },
+    "bodyPatterns": [
+      {
+        "equalToJson": {
+          "message": { "token": "valid-device" },
+          "validate_only": true
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": { "name": "projects/testing-project-id/messages/123" }
+  }
+}

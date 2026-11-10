@@ -3,6 +3,12 @@ import Testing
 
 extension SuiteTrait where Self == GCPClientTrait {
     static var gcpClient: Self { .init() }
+    static func gcpClient(
+        _ configure: @escaping @Sendable (isolated MockCredential) -> Void
+    ) -> Self {
+        .init(configureCredential: configure)
+    }
+
 }
 
 extension GCPClient {
@@ -10,6 +16,8 @@ extension GCPClient {
 }
 
 struct GCPClientTrait: SuiteTrait, TestScoping {
+    var configureCredential: @Sendable (isolated MockCredential) -> Void = { _ in }
+
     func provideScope(
         for test: Test,
         testCase: Test.Case?,
@@ -17,18 +25,21 @@ struct GCPClientTrait: SuiteTrait, TestScoping {
     ) async throws {
         initLogger()
 
-        let client = try GCPClient(credentialFactory: .mock())
+        let credential = MockCredential()
+        await configureCredential(credential)
 
-        var didShutdown = false
+        let client = try GCPClient(
+            credentialFactory: .mock(credential: credential)
+        )
         defer {
-            if !didShutdown {
-                Task {
-                    try await client.shutdown()
-                }
+            do {
+                try await client.shutdown()
+            } catch {
+                Issue.record(error)
             }
         }
-        try await GCPClient.$mockCredentialClient.withValue(client, operation: function)
-        didShutdown = true
-        try await client.shutdown()
+        try await GCPClient.$mockCredentialClient.withValue(client) {
+            try await function()
+        }
     }
 }
