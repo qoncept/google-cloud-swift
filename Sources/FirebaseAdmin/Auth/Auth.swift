@@ -6,12 +6,6 @@ import Logging
 
 // INFO: https://github.com/firebase/firebase-admin-node/blob/master/src/auth/auth-api-request.ts
 
-struct AuthError: Error, CustomStringConvertible, LocalizedError {
-    var message: String
-    var description: String { message }
-    var errorDescription: String? { message }
-}
-
 public struct Auth: Sendable {
     public static let productionBaseURL: URL = URL(string: "https://identitytoolkit.googleapis.com/v1")!
 
@@ -53,7 +47,7 @@ public struct Auth: Sendable {
         var credential = client.credential
         let baseURL: URL
         guard let projectID = paramProjectID ?? Self.projectID(from: credential) else {
-            throw AuthError(message: "projectID must be provided if the credential doesn't have it.")
+            throw MessageError("projectID must be provided if the credential doesn't have it.")
         }
 
         if let paramBaseURL {
