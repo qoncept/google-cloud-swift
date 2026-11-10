@@ -88,7 +88,7 @@ import Testing
             var created_at: Date
         }
         let rows = try await bigQuery.query(
-            "SELECT * FROM dataset1.table_a WHERE id = \(bind: 1)",
+            "SELECT id, name, skillNum, created_at FROM dataset1.table_a WHERE id = \(bind: 1)",
             decoding: Row.self
         )
 
