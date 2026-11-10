@@ -29,17 +29,29 @@ import Logging
 import ServiceLifecycle
 
 extension GCPClientTest {
+    private struct NotifyingService: Service {
+        let client: GCPClient
+        let started: AsyncStream<Void>.Continuation
+
+        func run() async throws {
+            started.yield(())
+            try await client.run()
+        }
+    }
+
     @Test func serviceLifecycle() async throws {
         let logger = Logger(label: "GCPClientTest.\(#function)")
 
         let client = try GCPClient(credentialFactory: .mock(), logger: logger)
-        let serviceGroup = ServiceGroup(services: [client], logger: logger)
+        let (started, continuation) = AsyncStream<Void>.makeStream()
+        let serviceGroup = ServiceGroup(services: [NotifyingService(client: client, started: continuation)], logger: logger)
 
         try await withThrowingTaskGroup(of: Void.self) { group in
             group.addTask(priority: .high) {
                 try await serviceGroup.run()
             }
             group.addTask(priority: .low) {
+                for await _ in started { break }
                 await serviceGroup.triggerGracefulShutdown()
             }
             try await group.waitForAll()

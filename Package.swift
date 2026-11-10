@@ -17,10 +17,10 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-crypto.git", "1.0.0" ..< "5.0.0"),
-        .package(url: "https://github.com/swift-server/async-http-client.git", from: "1.30.2"),
-        .package(url: "https://github.com/vapor/jwt-kit.git", from: "5.1.1"),
-        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.9.1"),
+        .package(url: "https://github.com/apple/swift-crypto.git", "1.0.0" ..< "6.0.0"),
+        .package(url: "https://github.com/swift-server/async-http-client.git", from: "1.37.0"),
+        .package(url: "https://github.com/vapor/jwt-kit.git", from: "5.8.0"),
+        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.11.0"),
     ],
     targets: [
         .target(
