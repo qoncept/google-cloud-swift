@@ -10,7 +10,7 @@ SwiftサーバからGCPの各種サービスやFirebaseを利用するための�
 
 # テスト
 
-ローカルにエミュレータのGCP環境を立ち上げるためにdocker composeを利用する。
+テスト用の各種モックサーバやエミュレータを立ち上げるために、docker composeを利用する。
 
 ```sh
 docker compose up -d

@@ -1,0 +1,35 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/v1/projects/testing-project-id/messages:send",
+    "headers": {
+      "Authorization": { "equalTo": "Bearer test-access-token" },
+      "Content-Type": { "equalTo": "application/json" }
+    },
+    "bodyPatterns": [
+      {
+        "equalToJson": {
+          "message": { "token": "unregistered-device" },
+          "validate_only": false
+        }
+      }
+    ]
+  },
+  "response": {
+    "status": 404,
+    "headers": { "Content-Type": "application/json", "Retry-After": "120" },
+    "jsonBody": {
+      "error": {
+        "code": 404,
+        "message": "Requested entity was not found.",
+        "status": "NOT_FOUND",
+        "details": [
+          {
+            "@type": "type.googleapis.com/google.firebase.fcm.v1.FcmError",
+            "errorCode": "UNREGISTERED"
+          }
+        ]
+      }
+    }
+  }
+}

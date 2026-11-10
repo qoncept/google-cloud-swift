@@ -44,7 +44,7 @@ package struct AuthorizedClient: Sendable {
         responseType: Response.Type = Empty.self
     ) async throws -> Response {
         var components = URLComponents(url: baseURL.concattingPath(path), resolvingAgainstBaseURL: false)!
-        components.queryItems = queryItems
+        components.queryItems = queryItems.isEmpty ? nil : queryItems
 
         var req = HTTPClientRequest(url: components.url!.absoluteString)
         req.method = method
@@ -70,7 +70,7 @@ package struct AuthorizedClient: Sendable {
             let resBody = try await res.body.collect(upTo: .max)
 
             if UInt(400)..<600 ~= res.status.code {
-                let errorResponse: ErrorResponse
+                var errorResponse: ErrorResponse
                 do {
                     errorResponse = try JSONDecoder().decode(ErrorResponse.self, from: resBody)
                 } catch {
@@ -82,6 +82,8 @@ package struct AuthorizedClient: Sendable {
                         throw error
                     }
                 }
+                errorResponse.httpStatusCode = res.status.code
+                errorResponse.httpHeaders = res.headers
                 throw errorResponse
             }
 

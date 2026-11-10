@@ -1,4 +1,10 @@
 services:
+  wiremock:
+    image: wiremock/wiremock:3.13.2
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./fixtures/wiremock/mappings:/home/wiremock/mappings:ro
   cloudstorage:
     image: fsouza/fake-gcs-server
     ports:
@@ -8,6 +14,7 @@ services:
     command: -scheme http
   firebase:
     image: ghcr.io/sidepelican/firebaseemulatorimage:main
+    platform: linux/amd64
     ports:
       - 9099:9099 # Auth
     volumes:
