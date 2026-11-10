@@ -1,15 +1,13 @@
-import AsyncHTTPClient
 import Foundation
 import GoogleCloudBase
 import Logging
-import NIOFoundationCompat
+import NIOHTTP1
 
 /// A Firebase Cloud Messaging HTTP v1 client.
 public struct Messaging: Sendable {
     public static let productionBaseURL = URL(string: "https://fcm.googleapis.com/v1")!
 
-    private let client: GCPClient
-    private let baseURL: URL
+    private let authorizedClient: AuthorizedClient
     public let projectID: String
 
     private static func projectID(from credential: any Credential) -> String? {
@@ -27,9 +25,13 @@ public struct Messaging: Sendable {
         guard let projectID = paramProjectID ?? Self.projectID(from: client.credential) else {
             throw MessageError("projectID must be provided if the credential doesn't have it.")
         }
-        self.client = client
+        self.authorizedClient = AuthorizedClient(
+            baseURL: baseURL
+                .appendingPathComponent("projects")
+                .appendingPathComponent(projectID),
+            gcpClient: client
+        )
         self.projectID = projectID
-        self.baseURL = baseURL
     }
 
     /// Sends a message and returns its FCM resource name. Set `validateOnly` for a dry run.
@@ -42,21 +44,18 @@ public struct Messaging: Sendable {
             var name: String
         }
 
-        let token = try await client.credential.getAccessToken()
-        let endpoint = baseURL.appendingPathComponent("projects").appendingPathComponent(projectID)
-            .appendingPathComponent("messages:send")
-        var request = HTTPClientRequest(url: endpoint.absoluteString)
-        request.method = .POST
-        request.headers.add(name: "Authorization", value: "Bearer \(token.rawValue)")
-        request.headers.add(name: "Content-Type", value: "application/json")
-        request.body = .bytes(try JSONEncoder().encode(Request(message: message, validate_only: validateOnly)))
-        let response = try await client.httpClient.execute(request, timeout: .seconds(20), logger: logger)
-        let body = try await response.body.collect(upTo: 64 * 1024)
-        let data = Data(buffer: body)
-        guard (200..<300).contains(response.status.code) else {
-            throw MessagingError(statusCode: response.status.code, data: data)
+        do {
+            let response = try await authorizedClient.execute(
+                method: .POST,
+                path: "/messages:send",
+                payload: .json(Request(message: message, validate_only: validateOnly)),
+                logger: logger,
+                responseType: Response.self
+            )
+            return response.name
+        } catch let error as ErrorResponse {
+            throw MessagingError(error)
         }
-        return try JSONDecoder().decode(Response.self, from: data).name
     }
 }
 
@@ -68,36 +67,31 @@ public enum MessagingConfigurationError: Error {
 public struct MessagingError: Error, Sendable {
     public var statusCode: UInt
     public var status: String?
-    public var message: String?
+    public var message: String
+    public var headers: HTTPHeaders
     /// FCM-specific error code, when present in a `google.firebase.fcm.v1.FcmError` detail.
     public var fcmErrorCode: String?
 
     /// Only an explicit FCM `UNREGISTERED` response establishes that a token is no longer valid.
     public var isUnregistered: Bool { fcmErrorCode == "UNREGISTERED" }
 
-    init(statusCode: UInt, data: Data) {
-        struct Envelope: Decodable {
-            struct Body: Decodable {
-                struct Detail: Decodable {
-                    var type: String?
-                    var errorCode: String?
-                    enum CodingKeys: String, CodingKey {
-                        case type = "@type"
-                        case errorCode
-                    }
-                }
-                var status: String?
-                var message: String?
-                var details: [Detail]?
+    init(_ response: ErrorResponse) {
+        struct FCMDetail: Decodable {
+            var type: String
+            var errorCode: String?
+            enum CodingKeys: String, CodingKey {
+                case type = "@type"
+                case errorCode
             }
-            var error: Body
         }
-        let error = try? JSONDecoder().decode(Envelope.self, from: data).error
-        self.statusCode = statusCode
-        self.status = error?.status
-        self.message = error?.message
-        self.fcmErrorCode = error?.details?.first {
-            $0.type == "type.googleapis.com/google.firebase.fcm.v1.FcmError"
-        }?.errorCode
+        self.statusCode = response.httpStatusCode ?? UInt(clamping: response.error.code)
+        self.status = response.error.status
+        self.message = response.error.message
+        self.headers = response.httpHeaders ?? HTTPHeaders()
+        self.fcmErrorCode = response.error.details?.lazy
+            .compactMap { try? $0.decode(FCMDetail.self) }
+            .first {
+                $0.type == "type.googleapis.com/google.firebase.fcm.v1.FcmError"
+            }?.errorCode
     }
 }

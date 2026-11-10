@@ -22,18 +22,34 @@ import Testing
         }
     }
 
-    @Test func identifiesOnlyFCMUnregistered() {
+    @Test func identifiesOnlyFCMUnregistered() throws {
         let cases = [
-            (#"{"error":{"message":"gone","status":"NOT_FOUND","details":[{"@type":"type.googleapis.com/google.firebase.fcm.v1.FcmError","errorCode":"UNREGISTERED"}]}}"#, true),
-            (#"{"error":{"details":[{"@type":"type.googleapis.com/google.firebase.fcm.v1.FcmError","errorCode":"INVALID_ARGUMENT"}]}}"#, false),
-            (#"{"error":{"details":[{"@type":"other","errorCode":"UNREGISTERED"}]}}"#, false),
-            ("not json", false),
+            (#"{"error":{"code":404,"message":"gone","status":"NOT_FOUND","details":[{"@type":"type.googleapis.com/google.rpc.BadRequest","fieldViolations":[]},{"@type":"type.googleapis.com/google.firebase.fcm.v1.FcmError","errorCode":"UNREGISTERED"}]}}"#, true),
+            (#"{"error":{"code":404,"message":"gone","details":[{"@type":"type.googleapis.com/google.firebase.fcm.v1.FcmError","errorCode":"INVALID_ARGUMENT"}]}}"#, false),
+            (#"{"error":{"code":404,"message":"gone","details":[{"@type":"other","errorCode":"UNREGISTERED"}]}}"#, false),
         ]
         for (body, expected) in cases {
-            let error = MessagingError(statusCode: 404, data: Data(body.utf8))
+            let response = try JSONDecoder().decode(ErrorResponse.self, from: Data(body.utf8))
+            let error = MessagingError(response)
             #expect(error.statusCode == 404)
             #expect(error.isUnregistered == expected)
         }
+    }
+
+    @Test func preservesAndDecodesErrorDetails() throws {
+        struct BadRequest: Decodable {
+            struct Violation: Decodable { let field: String }
+            let fieldViolations: [Violation]
+        }
+        let body = #"{"error":{"code":400,"message":"invalid","details":[{"@type":"type.googleapis.com/google.rpc.BadRequest","fieldViolations":[{"field":"message.data"}]},{"@type":"example.com/unknown","nested":{"enabled":true,"values":[null,42]}}]}}"#
+        let response = try JSONDecoder().decode(ErrorResponse.self, from: Data(body.utf8))
+        let details = try #require(response.error.details)
+        #expect(try details[0].decode(BadRequest.self).fieldViolations.first?.field == "message.data")
+        let encoded = try JSONEncoder().encode(details[1])
+        let object = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        let nested = try #require(object["nested"] as? [String: Any])
+        #expect(nested["enabled"] as? Bool == true)
+        #expect((nested["values"] as? [Any])?.count == 2)
     }
 
     @Test func sendsAuthenticatedRequestAndPropagatesErrors() async throws {
@@ -59,6 +75,8 @@ import Testing
                     Issue.record("Expected an FCM error")
                 } catch let error as MessagingError {
                     #expect(error.statusCode == 404)
+                    #expect(error.headers.first(name: "Retry-After") == "120")
+                    #expect(error.fcmErrorCode == "UNREGISTERED")
                     #expect(error.isUnregistered)
                     #expect(error.message == "gone")
                 }
@@ -115,9 +133,10 @@ private final class FCMTestHandler: ChannelInboundHandler, @unchecked Sendable {
         case .end:
             guard let request else { return }
             let count = captured.withLockedValue { requests in requests.append(request); return requests.count }
-            let body = count == 1 ? #"{"name":"projects/test-project/messages/123"}"# : #"{"error":{"message":"gone","details":[{"@type":"type.googleapis.com/google.firebase.fcm.v1.FcmError","errorCode":"UNREGISTERED"}]}}"#
+            let body = count == 1 ? #"{"name":"projects/test-project/messages/123"}"# : #"{"error":{"code":404,"message":"gone","details":[{"@type":"type.googleapis.com/google.firebase.fcm.v1.FcmError","errorCode":"UNREGISTERED"}]}}"#
             var headers = HTTPHeaders()
             headers.add(name: "Content-Length", value: String(body.utf8.count))
+            headers.add(name: "Retry-After", value: "120")
             context.write(wrapOutboundOut(.head(.init(version: .http1_1, status: count == 1 ? .ok : .notFound, headers: headers))), promise: nil)
             var buffer = context.channel.allocator.buffer(capacity: body.utf8.count)
             buffer.writeString(body)
